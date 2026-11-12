@@ -79,6 +79,7 @@ def build_v8(work, prefix, jobs):
     env["PATH"] = str(depot) + os.pathsep + env["PATH"]
     env["DEPOT_TOOLS_UPDATE"] = "0"
     env["DEPOT_TOOLS_METRICS"] = "0"
+    run(["bash", depot / "ensure_bootstrap"], work, env)
     tree = work / "v8-tree"
     tree.mkdir(exist_ok=True)
     config = tree / ".gclient"
