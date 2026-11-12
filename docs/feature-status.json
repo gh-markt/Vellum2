@@ -1,0 +1,2749 @@
+{
+  "format": 1,
+  "release": "0.34",
+  "policy": "Catalog IDs are immutable. No full feature is claimed complete by the bootstrap. Update this ledger and CHANGELOG after acceptance.",
+  "features": [
+    {
+      "id": "AR-001",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AR-002",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-003",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-004",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-005",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AR-006",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-007",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-008",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-009",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-010",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-011",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-012",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-013",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-014",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-015",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-016",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-017",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-018",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-019",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-020",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-021",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-022",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-023",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-024",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-025",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-026",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-027",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-028",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-029",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-030",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-031",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-032",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-033",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-034",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-035",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-036",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-037",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-038",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-039",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-040",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-041",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-042",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-043",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-044",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-045",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-046",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-047",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-048",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-049",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-050",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-051",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-052",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-053",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-054",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-055",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-056",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-057",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-058",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-059",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-060",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-061",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-062",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-063",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-064",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-065",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-066",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-067",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-068",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-069",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-070",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-071",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-072",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-073",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-074",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-075",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-076",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-077",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-078",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-079",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-080",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-081",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-082",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-083",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-084",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-085",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-086",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-087",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-088",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-089",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ],
+      "limitations": "Portable range/parity selection only; full dialog, selected-area semantics, copies and native output remain unfinished."
+    },
+    {
+      "id": "AR-090",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AR-091",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AR-092",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AR-093",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-094",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AR-095",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-096",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-097",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-098",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-099",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-100",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-101",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-102",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-103",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-104",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-105",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-106",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-107",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-108",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-109",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-110",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-111",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-112",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-113",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-114",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-115",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-116",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-117",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-118",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-119",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-120",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-121",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-122",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-123",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-124",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-125",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-126",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-127",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-128",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-129",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-130",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-131",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-132",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-133",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-134",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-135",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-136",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-137",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-138",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-139",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-140",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-141",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-142",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-143",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-144",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-145",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-146",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-147",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-148",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-149",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-150",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-151",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-152",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-153",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-154",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-155",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-156",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-157",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-158",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-159",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AR-160",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AR-161",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-162",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-163",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-164",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-165",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-166",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-167",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-168",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-169",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-170",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-171",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-172",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-173",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-174",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-175",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-176",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-177",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-178",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-179",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-180",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-181",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-182",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-183",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-184",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-185",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-186",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-187",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-188",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-189",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-190",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-191",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-192",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-193",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-194",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-195",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-196",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-197",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-198",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-199",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-200",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-201",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-202",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-203",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AR-204",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-001",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AC-002",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-003",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-004",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-005",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AC-006",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-007",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-008",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-009",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-010",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-011",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-012",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-013",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-014",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-015",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-016",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-017",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-018",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-019",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-020",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-021",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-022",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-023",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-024",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-025",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-026",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-027",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-028",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-029",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-030",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-031",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-032",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-033",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-034",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-035",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-036",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-037",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-038",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-039",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-040",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-041",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-042",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-043",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-044",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-045",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-046",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-047",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-048",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-049",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-050",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-051",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-052",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-053",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-054",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-055",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-056",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-057",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-058",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-059",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-060",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-061",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-062",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-063",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-064",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-065",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-066",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-067",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-068",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-069",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-070",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-071",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-072",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-073",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-074",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-075",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-076",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-077",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-078",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-079",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-080",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-081",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-082",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-083",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-084",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-085",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-086",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-087",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-088",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-089",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-090",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-091",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-092",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-093",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-094",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-095",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-096",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-097",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-098",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-099",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-100",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-101",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-102",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-103",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-104",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-105",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-106",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-107",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-108",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-109",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-110",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-111",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-112",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-113",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-114",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-115",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-116",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-117",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-118",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-119",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-120",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-121",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-122",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-123",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-124",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-125",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-126",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-127",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-128",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-129",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-130",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-131",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-132",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-133",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-134",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-135",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-136",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-137",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-138",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-139",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-140",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-141",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-142",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-143",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-144",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-145",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-146",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-147",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-148",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-149",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-150",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-151",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-152",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-153",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-154",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-155",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-156",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-157",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-158",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-159",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-160",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-161",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-162",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-163",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-164",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-165",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-166",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-167",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-168",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-169",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-170",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-171",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-172",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-173",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-174",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-175",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-176",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-177",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-178",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-179",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-180",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-181",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-182",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-183",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-184",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-185",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-186",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-187",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-188",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-189",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-190",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-191",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-192",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-193",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-194",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-195",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-196",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-197",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-198",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-199",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-200",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-201",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-202",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-203",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-204",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-205",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-206",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-207",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-208",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-209",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-210",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-211",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-212",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-213",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-214",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-215",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-216",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-217",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ],
+      "limitations": "Portable range/parity selection only; full dialog, selected-area semantics, copies and native output remain unfinished."
+    },
+    {
+      "id": "AC-218",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AC-219",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AC-220",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AC-221",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-222",
+      "status": "partial",
+      "evidence": [
+        "VERIFICATION.md",
+        "tests/test_ui.cc",
+        "tests/test_layout.cc",
+        "tests/test_permissions.cc",
+        "tests/test_print_ui.cc",
+        "tests/test_print_device.cc"
+      ]
+    },
+    {
+      "id": "AC-223",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-224",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-225",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-226",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-227",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-228",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-229",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-230",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-231",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-232",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-233",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-234",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-235",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-236",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-237",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-238",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-239",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-240",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-241",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-242",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-243",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-244",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-245",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-246",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-247",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-248",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-249",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-250",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-251",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-252",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-253",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-254",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-255",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-256",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-257",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-258",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-259",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-260",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-261",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-262",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-263",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-264",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-265",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-266",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-267",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-268",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-269",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-270",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-271",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-272",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-273",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-274",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-275",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-276",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-277",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-278",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-279",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-280",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-281",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-282",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-283",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-284",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-285",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-286",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-287",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-288",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-289",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-290",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-291",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-292",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-293",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-294",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-295",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-296",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-297",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-298",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-299",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-300",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-301",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-302",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-303",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-304",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-305",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-306",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-307",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-308",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-309",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-310",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-311",
+      "status": "excluded",
+      "evidence": []
+    },
+    {
+      "id": "AC-312",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-313",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-314",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-315",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-316",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-317",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-318",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-319",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-320",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-321",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-322",
+      "status": "not_started",
+      "evidence": []
+    },
+    {
+      "id": "AC-323",
+      "status": "not_started",
+      "evidence": []
+    }
+  ]
+}

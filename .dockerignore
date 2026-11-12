@@ -1,0 +1,6 @@
+work
+build*
+.deps
+.git
+__pycache__
+*.zip

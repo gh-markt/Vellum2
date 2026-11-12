@@ -1,0 +1,10 @@
+/build*/
+/work/
+/.deps/
+/install/
+__pycache__/
+*.pyc
+*.gcda
+*.gcno
+/coverage/
+.idea

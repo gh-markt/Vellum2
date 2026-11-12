@@ -1,0 +1,60 @@
+name: Vellum build and correctness
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [none, address, undefined]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install compiler, wxGTK/wxWidgets and test prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ cmake ninja-build python3-pip libwxgtk3.2-dev gcovr clang-format
+      - name: Configure core tests
+        shell: bash
+        run: |
+          extra=()
+          if [ "${{ matrix.sanitizer }}" != none ]; then extra+=("-DVELLUM_SANITIZER=${{ matrix.sanitizer }}"); fi
+          cmake -S . -B work/ci -G Ninja -DVELLUM_CORE_ONLY=ON -DCMAKE_BUILD_TYPE=Debug "${extra[@]}"
+      - run: cmake --build work/ci -j2
+      - run: ctest --test-dir work/ci --output-on-failure
+  coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y g++ cmake gcovr
+      - run: cmake -S . -B work/coverage -DVELLUM_CORE_ONLY=ON -DVELLUM_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+      - run: cmake --build work/coverage -j2
+      - run: ctest --test-dir work/coverage --output-on-failure
+      - run: |
+          gcovr --root . --filter src/ --exclude-directory '.*vellum_fake_worker[.]dir.*' --object-directory work/coverage --txt --txt-metric branch work/coverage
+          gcovr --root . --filter src/ --exclude-directory '.*vellum_fake_worker[.]dir.*' --object-directory work/coverage --json-summary work/coverage/summary.json --html-details work/coverage/index.html work/coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-line-branch-coverage
+          path: work/coverage/
+  ubuntu-full:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ubuntu full integration build (wxWidgets >=3.2.6, real static MuPDF and V8)
+        run: docker build --build-arg VELLUM_CORE_ONLY=OFF --build-arg VELLUM_COVERAGE=ON -t vellum-full .
+      - name: Full integration line and branch report
+        run: |
+          docker run --name vellum-evidence vellum-full sh -c 'xvfb-run -a ctest --test-dir work/docker --output-on-failure && mkdir -p work/reports && gcovr --root . --filter src/ --exclude-directory ".*vellum_fake_worker[.]dir.*" --object-directory work/docker --json-summary work/reports/summary.json --html-details work/reports/index.html work/docker'
+          mkdir -p work/full-evidence
+          docker cp vellum-evidence:/src/vellum/work/reports/. ./work/full-evidence
+          docker rm vellum-evidence
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-integration-coverage
+          path: work/full-evidence/

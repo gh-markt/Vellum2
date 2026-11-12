@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "mupdf": {
+    "url": "https://github.com/ArtifexSoftware/mupdf.git",
+    "revision": "a895aab8501d477b74cbf631fe4ff3c0f9706471",
+    "version": "1.26.1"
+  },
+  "v8": {
+    "url": "https://chromium.googlesource.com/v8/v8.git",
+    "revision": "9c09e7876ff830e1f9a731aa930040d1028ff5a1",
+    "version": "13.1.201.22"
+  },
+  "depot_tools": {
+    "url": "https://chromium.googlesource.com/chromium/tools/depot_tools.git",
+    "revision": "main"
+  },
+  "v8_gn_args": "is_debug=false is_component_build=false v8_monolithic=true v8_use_external_startup_data=false v8_enable_i18n_support=true icu_use_data_file=false v8_enable_pointer_compression=false v8_enable_sandbox=false v8_enable_external_code_space=false use_custom_libcxx=false symbol_level=0 treat_warnings_as_errors=false",
+  "notes": "Release pins are bootstrap compatibility baselines, not a security maintenance claim. depot_tools is a build tool; its resolved commit is recorded in the local receipt. Revalidate and update dependency versions before distribution."
+}
