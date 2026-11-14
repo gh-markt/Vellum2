@@ -42,12 +42,30 @@ release number for each agent turn; open a new section when a release is chosen.
 | vellum_printing | Custom dialog, preview and native submission | print plan, PDF, wxWidgets |
 | vellum_ui | wxWidgets views and orchestration | Public subsystem APIs |
 
+The above list is far from exhaustive and and as vellum grows in scope and capability
+it is expected that other items will be added to this file in the above list.
 The UI must not reach into MuPDF/V8 internals. MuPDF is exposed through an opaque
 implementation; its longjmp exception mechanism must never bypass C++ objects
 with destructors. Establish a C boundary with fz_try/fz_always/fz_catch, then
 translate errors into C++ exceptions outside it. No V8 types cross the worker
 process boundary. PDF and V8 headers are system includes; project warnings remain
 errors. Dependencies are not subject to project formatting or coverage metrics.
+Never include V8 or MuPDF source code in Vellum coverage totals; Vellum-owned
+adapters and worker code remain in scope and require boundary tests.
+
+Every project-owned callback passed to MuPDF must use a C-compatible, non-throwing
+trampoline. Use `vellum::guard_callback` for scalar or void callbacks, or an
+equivalent guard for other signatures: initialize exception storage explicitly empty,
+retain the first C++ exception in operation-owned state, suppress subsequent ordinary callback work and return a failure
+value valid for that specific MuPDF callback. Required cleanup callbacks must still
+run despite a pending exception; `vellum::guard_cleanup_callback` retains the first
+error while protecting such void callbacks. After MuPDF returns and its error boundary
+has completed, report the retained exception without losing a separate MuPDF error
+or skipping cleanup. If an API has no safe failure value, design an appropriate
+abort or error protocol before using it. Keep callback state alive for every possible
+invocation and synchronize it when callbacks can run concurrently. A callback must
+not use MuPDF longjmp across C++ frames with live destructors; the C++ exception
+guard alone does not contain MuPDF's longjmp mechanism.
 
 Each open document has one owning session. Current bootstrap rendering is
 synchronous on the UI thread and bounded by page dimensions; background document
@@ -212,6 +230,42 @@ PDF-engine types.
 
 ## Build and verification boundaries
 
+Continuous, risk-based verification is part of development, not a final acceptance
+step. [docs/VERIFICATION-ARCHITECTURE.md](docs/VERIFICATION-ARCHITECTURE.md) is
+the authoritative verification architecture; its living subsystem and workflow
+inventory is [docs/SUBSYSTEM-INVENTORY.md](docs/SUBSYSTEM-INVENTORY.md). Apply
+them to all project-owned behavior and update the inventory as the product evolves.
+IMPLEMENTATION-REVIEW.md governs the separate comprehensive audit.
+
+For every new piece of project-owned production code, aim for greater than 95% line
+and greater than 80% compiler-reported branch coverage as it is developed, as well
+as across the project. Measure the changed code separately where instrumentation
+permits; investigate uncovered decisions and feasible compiler-generated paths and
+add meaningful verification instead of leaving gaps for a later stage. Record
+measurement limitations and any remaining gaps and their reasons. These targets do
+not establish correctness by themselves or impose a numerical build gate. No high
+aggregate result excuses an unverified critical path or subsystem. Account explicitly
+for missing measurements and the scope and assumptions of correctness arguments.
+Apply these goals to every newly created project-owned source file and each
+meaningful subsection, as well as the whole application. When a subsection has
+100% line coverage, pursue greater than 95% compiler-reported branch coverage
+there. Investigate and document genuinely unreachable or otherwise unverified
+edges; never fabricate behavior or weaken verification to meet a percentage.
+
+Maintain `HANDOFF.md` as a concise current recovery checkpoint. Update it after
+each source-file change and before the next action. Record the active state,
+immediate next steps and genuinely unresolved blockers; remove completed results
+unless they are needed to resume. Permanent requirements and durable findings
+belong in the authoritative architecture or verification documents, not a diary
+of completed work in the handoff.
+
+Keep instrumented test counters and coverage-report generation on a RAM-backed
+filesystem when available, preserving complete project and subprocess coverage.
+Size its allocation from measured peak usage of the full suite, with headroom;
+reassess and increase Docker and CI allocations as the application and tests grow.
+Report insufficient space or counter-write failures rather than presenting partial
+coverage as complete. Persist reports only when they are needed as evidence.
+
 CMake builds separate static subsystems, executable UI and isolated V8 worker.
 wxWidgets is a required system development installation at normal configuration.
 No separate CUPS development dependency is required. MuPDF and V8 are built
@@ -225,7 +279,7 @@ in concurrency. Never automatically install OS packages on the user's Slackware.
 Core-only builds test domain/persistence/IPC policy without GUI/PDF/V8. Passing them
 never establishes correctness of real MuPDF/V8/wxWidgets printing integration. Full CI prepares
 real dependencies and runs integration tests. Coverage reports include line and
-branch data; every omitted reachable path remains tracked. Audit the tests and
+branch data; unresolved reachable-path verification gaps remain tracked. Audit the tests and
 oracles themselves under IMPLEMENTATION-REVIEW.md. Record tool versions, commands,
 source state and limitations in evidence, not just test counts. Never claim a
 formal proof from a successful test run or an informal correctness argument.

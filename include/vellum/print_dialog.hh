@@ -21,14 +21,24 @@ class print_dialog : public wxDialog {
     void export_preview(const std::filesystem::path &path);
 
   private:
+    wxDECLARE_EVENT_TABLE();
     void build_controls(wxWindow *controls, wxFlexGridSizer *grid);
     void build_footer(wxBoxSizer *root);
-    void connect_controls();
+    void on_change(wxCommandEvent &event);
+    void on_spin(wxSpinEvent &event);
+    void on_decimal_spin(wxSpinDoubleEvent &event);
+    void on_properties(wxCommandEvent &event);
+    void on_submit(wxCommandEvent &event);
+    void on_save_preview(wxCommandEvent &event);
+    void on_previous_side(wxCommandEvent &event);
+    void on_next_side(wxCommandEvent &event);
     void settings_changed();
+    void regenerate_preview_safely();
     print_options read_options();
     void choose_printer();
     void submit();
     void update_side_label();
+    void navigate_preview(bool forward);
     void save_preview();
     void on_preview_timer(wxTimerEvent &event);
     pdf_document &document;
@@ -37,6 +47,7 @@ class print_dialog : public wxDialog {
     int current_page;
     print_job current_job;
     sheet_painter painter;
+    bool controls_ready = false;
     bool plan_valid = false;
     std::size_t preview_side = 0;
     wxTimer timer;

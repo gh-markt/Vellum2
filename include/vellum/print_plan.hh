@@ -3,7 +3,9 @@
 #include <vector>
 namespace vellum {
 enum class page_subset { all, odd, even };
-// Physical document page numbers are one-based. Selection is sorted and deduplicated.
+// Document pages are one-based; zero represents an inserted blank. Order and
+// repeated pages follow the expression. Odd/even filters use positions in the
+// complete selection, including inserted blanks.
 std::vector<int> select_print_pages(std::string_view ranges, int page_count,
                                     page_subset subset = page_subset::all);
 } // namespace vellum

@@ -6,6 +6,8 @@ Their public owner password is `test-owner`. The `password.pdf` user password is
 `test-user`; other fixtures use an empty user password. Regeneration uses randomized
 encryption IDs, so new bytes require review and refreshed hashes. Normal builds
 use the bundled fixtures and do not require pypdf or cryptography.
+`long-owner.pdf` instead uses the public owner password
+`vellum-long-owner-password-test` to exercise allocated credential storage.
 
 restricted.pdf deliberately contains a form while forbidding printing/editing/copy.
 Printing, modification, extraction and form permissions are independent. These

@@ -6,10 +6,36 @@ Do not claim whole catalog features from partial infrastructure.
 
 ## 0.34 — Reboot bootstrap
 
+- Recheck dependency receipts and installed headers on each build, repairing
+  incomplete or incompatible managed installations without manual stamp removal.
+- Separate test registration and common allocation interception while retaining
+  the individual fault scenarios and assertions.
+- Clean up atomic-write temporary files if allocation fails during publication.
+- Remove a newly created private recovery directory if constructing its path fails.
+- Preserve the current viewer session if preparing a replacement document title fails.
+- Clean up failed Editor-mode recovery setup and hide stale page images after render errors.
+- Keep the prior zoom policy if preparing a new zoom label fails.
+- Commit owner credentials without a fallible allocation after granting permissions.
+- Reject printer measurements with an empty printable area.
+- Reject malformed poster sides before attempting to render their labels.
+- Exit the isolated script worker cleanly if startup throws an exception.
+- Complete script-worker cleanup before reporting a successful result.
+- Report a disconnected script worker promptly instead of waiting for a timeout.
+- Preserve operating-system errors when waiting for a JavaScript worker fails;
+  test IPC resource, spawn, communication and interruption failures in batches.
+- Test atomic persistence under interrupted/short writes, synchronization and
+  rename failures, and actual disk exhaustion on a dedicated bounded tmpfs.
+- Exercise application startup and clean exit, adversarial PDF render bounds,
+  and print selection, permissions and virtual-device error paths under Xvfb.
+- Exercise real V8 worker success, script errors and malformed requests through
+  its protocol, including normal exit for coverage collection.
+- Reuse installed static dependency archives without requiring the source build
+  trees, and reject dependency receipts for commits other than the pinned ones.
 - Remove the direct CUPS dependency from sources, CMake, CI and prerequisites;
   use the wxWidgets native printer-settings adapter instead.
-- Add a portable static print-plan foundation with disjoint range parsing,
-  deduplication, document-page odd/even filtering and adversarial/model-oracle tests.
+- Add a portable static print-plan foundation with ordered range parsing,
+  repeated pages, explicit blank pages, selection-position odd/even filtering and
+  adversarial/model-oracle tests.
 - Establish the full portable printing specification, including scaling, poster
   tiling, booklet/duplex/N-up and automatic preview sharing the final sheet plan.
   Implement the custom wx dialog, shared preview/output painter and native submission.

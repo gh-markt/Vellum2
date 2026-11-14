@@ -6,7 +6,7 @@
 #include <wx/textdlg.h>
 namespace vellum {
 void main_frame::build_menus() {
-    auto *file = new wxMenu;
+    auto file = std::make_unique<wxMenu>();
     file->Append(open_id, "&Open PDF...\tCtrl+O");
     file->Append(recover_id, "&Recover snapshot...");
     file->Append(wxID_SAVE, "&Save\tCtrl+S");
@@ -15,24 +15,37 @@ void main_frame::build_menus() {
     file->Append(unlock_id, "Unlock PDF permissions...");
     file->Append(wxID_PRINT, "&Print...\tCtrl+P");
     file->Append(wxID_EXIT, "E&xit");
-    auto *navigation = new wxMenu;
+    auto navigation = std::make_unique<wxMenu>();
     navigation->Append(previous_id, "Previous page\tAlt+Left");
     navigation->Append(next_id, "Next page\tAlt+Right");
-    auto *view = new wxMenu;
+    auto view = std::make_unique<wxMenu>();
     view->Append(zoom_in_id, "Zoom in\tCtrl++");
     view->Append(zoom_out_id, "Zoom out\tCtrl+-");
     view->Append(actual_id, "100%\tCtrl+1");
     view->Append(fit_page_id, "Fit page\tCtrl+0");
     view->Append(fit_width_id, "Fit width\tCtrl+2");
     view->Append(fit_height_id, "Fit height\tCtrl+3");
-    auto *menus = new wxMenuBar;
-    menus->Append(file, "&File");
-    menus->Append(navigation, "&Navigate");
-    menus->Append(view, "&View");
-    this->SetMenuBar(menus);
+    auto menus = std::make_unique<wxMenuBar>();
+    if (!menus->Append(file.get(), "&File")) {
+        throw std::runtime_error("cannot add File menu");
+    }
+    file.release();
+    if (!menus->Append(navigation.get(), "&Navigate")) {
+        throw std::runtime_error("cannot add Navigate menu");
+    }
+    navigation.release();
+    if (!menus->Append(view.get(), "&View")) {
+        throw std::runtime_error("cannot add View menu");
+    }
+    view.release();
+    this->SetMenuBar(menus.get());
+    menus.release();
 }
 void main_frame::build_toolbar() {
     auto *tools = this->CreateToolBar(wxTB_HORIZONTAL | wxTB_FLAT | wxTB_TEXT);
+    if (tools == nullptr) {
+        throw std::runtime_error("cannot create toolbar");
+    }
     tools->AddTool(open_id, "Open", wxArtProvider::GetBitmap(wxART_FILE_OPEN, wxART_TOOLBAR));
     tools->AddTool(previous_id, "Previous", wxArtProvider::GetBitmap(wxART_GO_BACK, wxART_TOOLBAR));
     tools->AddTool(next_id, "Next", wxArtProvider::GetBitmap(wxART_GO_FORWARD, wxART_TOOLBAR));
@@ -53,59 +66,89 @@ void main_frame::build_toolbar() {
     tools->AddTool(wxID_PRINT, "Print", wxArtProvider::GetBitmap(wxART_PRINT, wxART_TOOLBAR));
     tools->Realize();
 }
-void main_frame::bind_actions() {
-    const auto open = [this](wxCommandEvent &) { this->open_document(); };
-    const auto recover = [this](wxCommandEvent &) { this->recover_document(); };
-    const auto save = [this](wxCommandEvent &) { this->save_document(); };
-    const auto save_as = [this](wxCommandEvent &) { this->save_copy(); };
-    const auto editor = [this](wxCommandEvent &) { this->enable_editor(); };
-    const auto previous = [this](wxCommandEvent &) {
-        if (this->document && this->page > 0) {
-            this->go_to_page(this->page);
-        }
-    };
-    const auto next = [this](wxCommandEvent &) {
-        if (this->document && this->page + 1 < this->document->pages()) {
-            this->go_to_page(this->page + 2);
-        }
-    };
-    const auto print = [this](wxCommandEvent &) { this->print_document(); };
-    const auto exit = [this](wxCommandEvent &) { this->Close(); };
-    this->Bind(wxEVT_MENU, open, open_id);
-    this->Bind(wxEVT_MENU, recover, recover_id);
-    this->Bind(wxEVT_MENU, save, wxID_SAVE);
-    this->Bind(wxEVT_MENU, save_as, wxID_SAVEAS);
-    this->Bind(wxEVT_MENU, editor, editor_id);
-    this->Bind(wxEVT_MENU, previous, previous_id);
-    this->Bind(wxEVT_MENU, next, next_id);
-    this->Bind(wxEVT_MENU, print, wxID_PRINT);
-    this->Bind(wxEVT_MENU, exit, wxID_EXIT);
-    const auto unlock = [this](wxCommandEvent &) { this->unlock_permissions(); };
-    this->Bind(wxEVT_MENU, unlock, unlock_id);
-    this->bind_view_actions();
+// clang-format off
+wxBEGIN_EVENT_TABLE(main_frame, wxFrame)
+    EVT_MENU(open_id, main_frame::on_open)
+    EVT_MENU(recover_id, main_frame::on_recover)
+    EVT_MENU(wxID_SAVE, main_frame::on_save)
+    EVT_MENU(wxID_SAVEAS, main_frame::on_save_as)
+    EVT_MENU(editor_id, main_frame::on_editor)
+    EVT_MENU(previous_id, main_frame::on_previous)
+    EVT_MENU(next_id, main_frame::on_next)
+    EVT_MENU(wxID_PRINT, main_frame::on_print)
+    EVT_MENU(wxID_EXIT, main_frame::on_exit)
+    EVT_MENU(unlock_id, main_frame::on_unlock)
+    EVT_MENU(fit_page_id, main_frame::on_fit_page)
+    EVT_MENU(fit_width_id, main_frame::on_fit_width)
+    EVT_MENU(fit_height_id, main_frame::on_fit_height)
+    EVT_MENU(actual_id, main_frame::on_actual_size)
+    EVT_MENU(zoom_in_id, main_frame::on_zoom_in)
+    EVT_MENU(zoom_out_id, main_frame::on_zoom_out)
+    EVT_COMBOBOX(zoom_control_id, main_frame::on_zoom_control)
+    EVT_TEXT_ENTER(zoom_control_id, main_frame::on_zoom_control)
+    EVT_SPINCTRL(page_control_id, main_frame::on_page_control)
+    EVT_TIMER(autosave_timer_id, main_frame::on_timer)
+    EVT_TIMER(zoom_timer_id, main_frame::on_zoom_timer)
+wxEND_EVENT_TABLE()
+    // clang-format on
+
+    void main_frame::on_open(wxCommandEvent &) {
+    this->open_document();
 }
-void main_frame::bind_view_actions() {
-    const auto fit_page = [this](wxCommandEvent &) { this->set_zoom(zoom_mode::fit_page); };
-    const auto fit_width = [this](wxCommandEvent &) { this->set_zoom(zoom_mode::fit_width); };
-    const auto fit_height = [this](wxCommandEvent &) { this->set_zoom(zoom_mode::fit_height); };
-    const auto actual = [this](wxCommandEvent &) { this->set_zoom(zoom_mode::percentage, 100); };
-    const auto zoom_in = [this](wxCommandEvent &) {
-        this->set_zoom(zoom_mode::percentage, std::min(800.0, this->current_scale * 125));
-    };
-    const auto zoom_out = [this](wxCommandEvent &) {
-        this->set_zoom(zoom_mode::percentage, std::max(1.0, this->current_scale * 80));
-    };
-    const auto combo = [this](wxCommandEvent &) { this->apply_zoom_control(); };
-    const auto page = [this](wxSpinEvent &) { this->go_to_page(this->page_control->GetValue()); };
-    this->Bind(wxEVT_MENU, fit_page, fit_page_id);
-    this->Bind(wxEVT_MENU, fit_width, fit_width_id);
-    this->Bind(wxEVT_MENU, fit_height, fit_height_id);
-    this->Bind(wxEVT_MENU, actual, actual_id);
-    this->Bind(wxEVT_MENU, zoom_in, zoom_in_id);
-    this->Bind(wxEVT_MENU, zoom_out, zoom_out_id);
-    this->Bind(wxEVT_COMBOBOX, combo, zoom_control_id);
-    this->Bind(wxEVT_TEXT_ENTER, combo, zoom_control_id);
-    this->Bind(wxEVT_SPINCTRL, page, page_control_id);
+void main_frame::on_recover(wxCommandEvent &) {
+    this->recover_document();
+}
+void main_frame::on_save(wxCommandEvent &) {
+    this->save_document();
+}
+void main_frame::on_save_as(wxCommandEvent &) {
+    this->save_copy();
+}
+void main_frame::on_editor(wxCommandEvent &) {
+    this->enable_editor();
+}
+void main_frame::on_previous(wxCommandEvent &) {
+    if (this->document && this->page > 0) {
+        this->go_to_page(this->page);
+    }
+}
+void main_frame::on_next(wxCommandEvent &) {
+    if (this->document && this->page + 1 < this->document->pages()) {
+        this->go_to_page(this->page + 2);
+    }
+}
+void main_frame::on_print(wxCommandEvent &) {
+    this->print_document();
+}
+void main_frame::on_exit(wxCommandEvent &) {
+    this->Close();
+}
+void main_frame::on_unlock(wxCommandEvent &) {
+    this->unlock_permissions();
+}
+void main_frame::on_fit_page(wxCommandEvent &) {
+    this->apply_zoom_menu(zoom_mode::fit_page);
+}
+void main_frame::on_fit_width(wxCommandEvent &) {
+    this->apply_zoom_menu(zoom_mode::fit_width);
+}
+void main_frame::on_fit_height(wxCommandEvent &) {
+    this->apply_zoom_menu(zoom_mode::fit_height);
+}
+void main_frame::on_actual_size(wxCommandEvent &) {
+    this->apply_zoom_menu(zoom_mode::percentage, 100);
+}
+void main_frame::on_zoom_in(wxCommandEvent &) {
+    this->apply_zoom_menu(zoom_mode::percentage, std::min(800.0, this->current_scale * 125));
+}
+void main_frame::on_zoom_out(wxCommandEvent &) {
+    this->apply_zoom_menu(zoom_mode::percentage, std::max(1.0, this->current_scale * 80));
+}
+void main_frame::on_zoom_control(wxCommandEvent &) {
+    this->apply_zoom_control();
+}
+void main_frame::on_page_control(wxSpinEvent &) {
+    this->go_to_page(this->page_control->GetValue());
 }
 void main_frame::update_actions() {
     const bool opened = static_cast<bool>(this->document);
@@ -124,14 +167,21 @@ void main_frame::set_zoom(zoom_mode mode, double percentage) {
         return;
     }
     calculate_view_scale(mode, this->document->dimensions(this->page), {100, 100}, percentage);
+    const auto label = mode == zoom_mode::fit_page     ? "Fit page"
+                       : mode == zoom_mode::fit_width  ? "Fit width"
+                       : mode == zoom_mode::fit_height ? "Fit height"
+                                                       : wxString::Format("%.1f%%", percentage);
+    this->zoom_control->SetValue(label);
     this->current_zoom_mode = mode;
     this->percentage = percentage;
-    this->zoom_control->SetValue(mode == zoom_mode::fit_page    ? "Fit page"
-                                 : mode == zoom_mode::fit_width ? "Fit width"
-                                 : mode == zoom_mode::fit_height
-                                     ? "Fit height"
-                                     : wxString::Format("%.1f%%", percentage));
     this->show_page();
+}
+void main_frame::apply_zoom_menu(zoom_mode mode, double percentage) {
+    try {
+        this->set_zoom(mode, percentage);
+    } catch (const std::exception &error) {
+        this->show_error(error);
+    }
 }
 void main_frame::apply_zoom_control() {
     try {
@@ -201,12 +251,13 @@ void main_frame::unlock_permissions() {
     if (!this->document) {
         return;
     }
-    wxPasswordEntryDialog dialog(this, "Enter the PDF owner password to unlock its permissions.",
-                                 "Unlock PDF permissions");
-    if (dialog.ShowModal() != wxID_OK) {
-        return;
-    }
     try {
+        wxPasswordEntryDialog dialog(this,
+                                     "Enter the PDF owner password to unlock its permissions.",
+                                     "Unlock PDF permissions");
+        if (dialog.ShowModal() != wxID_OK) {
+            return;
+        }
         const auto password = dialog.GetValue().ToStdString(wxConvUTF8);
         if (!this->document->authenticate_owner(std::string_view(password))) {
             throw std::runtime_error("This password does not grant owner privileges");

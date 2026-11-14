@@ -144,6 +144,11 @@ std::vector<print_side> poster_sides(const std::vector<page_extent> &document,
         throw std::invalid_argument("tile overlap/labels leave no printable area");
     }
     for (const int page : pages) {
+        if (page == 0) {
+            add_side(output,
+                     {static_cast<int>(output.size()), 0, false, 0, 0, {{0, clip, clip, false}}});
+            continue;
+        }
         const auto size = document[static_cast<std::size_t>(page - 1)];
         const double width = size.width * options.percentage / 100;
         const double height = size.height * options.percentage / 100;
@@ -210,8 +215,11 @@ print_job compose_print_job(const std::vector<page_extent> &document,
         throw std::invalid_argument("print selection is empty or too large");
     }
     for (const int page : selected) {
-        if (page < 1 || static_cast<std::size_t>(page) > document.size()) {
+        if (page < 0 || static_cast<std::size_t>(page) > document.size()) {
             throw std::invalid_argument("print page outside document");
+        }
+        if (page == 0) {
+            continue;
         }
         const auto size = document[static_cast<std::size_t>(page - 1)];
         if (!std::isfinite(size.width) || !std::isfinite(size.height) || size.width <= 0 ||

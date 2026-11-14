@@ -52,14 +52,13 @@ void atomic_write(const std::filesystem::path &target, std::string_view bytes,
     std::vector<char> temporary(pattern.begin(), pattern.end());
     temporary.push_back('\0');
     const descriptor output(::mkostemp(temporary.data(), O_CLOEXEC));
-    const std::filesystem::path temporary_path(temporary.data());
     try {
         write_all(output.get(), bytes);
         synchronize(output.get());
         if (observer) {
             observer(commit_point::before_rename);
         }
-        if (::rename(temporary_path.c_str(), target.c_str()) != 0) {
+        if (::rename(temporary.data(), target.c_str()) != 0) {
             throw std::system_error(errno, std::generic_category(), "rename");
         }
         if (observer) {
@@ -67,8 +66,7 @@ void atomic_write(const std::filesystem::path &target, std::string_view bytes,
         }
         synchronize(directory.get());
     } catch (...) {
-        std::error_code ignored;
-        std::filesystem::remove(temporary_path, ignored);
+        ::unlink(temporary.data());
         throw;
     }
 }
@@ -78,7 +76,12 @@ std::filesystem::path create_private_directory(const std::filesystem::path &base
     if (::mkdtemp(pattern.data()) == nullptr) {
         throw std::system_error(errno, std::generic_category(), "create private directory");
     }
-    return std::filesystem::path(pattern);
+    try {
+        return std::filesystem::path(pattern);
+    } catch (...) {
+        ::rmdir(pattern.c_str());
+        throw;
+    }
 }
 std::string read_file(const std::filesystem::path &path, std::size_t limit) {
     std::ifstream input(path, std::ios::binary);

@@ -17,7 +17,7 @@ jobs:
       - name: Install compiler, wxGTK/wxWidgets and test prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y g++ cmake ninja-build python3-pip libwxgtk3.2-dev gcovr clang-format
+          sudo apt-get install -y g++ cmake ninja-build python3-pip pkg-config libicu-dev libatomic1 libwxgtk3.2-dev gcovr clang-format
       - name: Configure core tests
         shell: bash
         run: |
@@ -25,22 +25,33 @@ jobs:
           if [ "${{ matrix.sanitizer }}" != none ]; then extra+=("-DVELLUM_SANITIZER=${{ matrix.sanitizer }}"); fi
           cmake -S . -B work/ci -G Ninja -DVELLUM_CORE_ONLY=ON -DCMAKE_BUILD_TYPE=Debug "${extra[@]}"
       - run: cmake --build work/ci -j2
-      - run: ctest --test-dir work/ci --output-on-failure
+      - name: Provide bounded filesystem for disk-full test
+        run: |
+          mkdir -p "$RUNNER_TEMP/vellum-disk-full"
+          sudo mount -t tmpfs -o "size=1m,uid=$(id -u),gid=$(id -g),mode=0700" tmpfs "$RUNNER_TEMP/vellum-disk-full"
+          echo "VELLUM_DISK_FULL_TEST_DIR=$RUNNER_TEMP/vellum-disk-full" >> "$GITHUB_ENV"
+      - run: ctest --test-dir work/ci -j "$(nproc)" --output-on-failure
   coverage:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y g++ cmake gcovr
+      - run: sudo apt-get update && sudo apt-get install -y g++ cmake pkg-config libicu-dev libatomic1 gcovr
       - run: cmake -S . -B work/coverage -DVELLUM_CORE_ONLY=ON -DVELLUM_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
       - run: cmake --build work/coverage -j2
-      - run: ctest --test-dir work/coverage --output-on-failure
-      - run: |
-          gcovr --root . --filter src/ --exclude-directory '.*vellum_fake_worker[.]dir.*' --object-directory work/coverage --txt --txt-metric branch work/coverage
-          gcovr --root . --filter src/ --exclude-directory '.*vellum_fake_worker[.]dir.*' --object-directory work/coverage --json-summary work/coverage/summary.json --html-details work/coverage/index.html work/coverage
+      - name: Provide bounded filesystem for disk-full test
+        run: |
+          mkdir -p "$RUNNER_TEMP/vellum-disk-full"
+          sudo mount -t tmpfs -o "size=1m,uid=$(id -u),gid=$(id -g),mode=0700" tmpfs "$RUNNER_TEMP/vellum-disk-full"
+          echo "VELLUM_DISK_FULL_TEST_DIR=$RUNNER_TEMP/vellum-disk-full" >> "$GITHUB_ENV"
+      - name: Run coverage on bounded RAM filesystem
+        run: |
+          mkdir -p "$RUNNER_TEMP/vellum-coverage-ram"
+          sudo mount -t tmpfs -o "size=128m,uid=$(id -u),gid=$(id -g),mode=0700" tmpfs "$RUNNER_TEMP/vellum-coverage-ram"
+          python3 scripts/coverage_in_ram.py --build work/coverage --ram-root "$RUNNER_TEMP/vellum-coverage-ram" --persist work/coverage-reports
       - uses: actions/upload-artifact@v4
         with:
           name: core-line-branch-coverage
-          path: work/coverage/
+          path: work/coverage-reports/
   ubuntu-full:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
@@ -50,7 +61,7 @@ jobs:
         run: docker build --build-arg VELLUM_CORE_ONLY=OFF --build-arg VELLUM_COVERAGE=ON -t vellum-full .
       - name: Full integration line and branch report
         run: |
-          docker run --name vellum-evidence vellum-full sh -c 'xvfb-run -a ctest --test-dir work/docker --output-on-failure && mkdir -p work/reports && gcovr --root . --filter src/ --exclude-directory ".*vellum_fake_worker[.]dir.*" --object-directory work/docker --json-summary work/reports/summary.json --html-details work/reports/index.html work/docker'
+          docker run --init --tmpfs /faultfs:rw,size=1m,mode=0700 --tmpfs /coverage:rw,size=128m,mode=0700 -e VELLUM_DISK_FULL_TEST_DIR=/faultfs --name vellum-evidence vellum-full python3 scripts/coverage_in_ram.py --build work/docker --ram-root /coverage --persist work/reports
           mkdir -p work/full-evidence
           docker cp vellum-evidence:/src/vellum/work/reports/. ./work/full-evidence
           docker rm vellum-evidence

@@ -14,6 +14,10 @@
     "url": "https://chromium.googlesource.com/chromium/tools/depot_tools.git",
     "revision": "main"
   },
+  "mupdf_make_args": ["build=release", "USE_MUJS=no", "USE_SYSTEM_LIBS=no", "HAVE_X11=no", "HAVE_GLUT=no", "HAVE_CURL=no", "HAVE_LEPTONICA=no", "HAVE_TESSERACT=no", "XCFLAGS=-fPIC -DFZ_ENABLE_JS=0"],
+  "mupdf_build_output": "build/release",
+  "mupdf_artifacts": ["lib/libmupdf.a", "lib/libmupdf-third.a", "include/mupdf/fitz.h", "include/mupdf/pdf.h"],
+  "v8_artifacts": ["lib/libv8_monolith.a", "include/v8/v8.h"],
   "v8_gn_args": "is_debug=false is_component_build=false v8_monolithic=true v8_use_external_startup_data=false v8_enable_i18n_support=true icu_use_data_file=false v8_enable_pointer_compression=false v8_enable_sandbox=false v8_enable_external_code_space=false use_custom_libcxx=false symbol_level=0 treat_warnings_as_errors=false",
   "notes": "Release pins are bootstrap compatibility baselines, not a security maintenance claim. depot_tools is a build tool; its resolved commit is recorded in the local receipt. Revalidate and update dependency versions before distribution."
 }

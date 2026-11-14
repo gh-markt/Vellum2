@@ -1,9 +1,43 @@
 #include "vellum/autosave.hh"
 #include <filesystem>
 #include <iostream>
+#include <limits>
+#include <new>
 #include <stdexcept>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+// Explicit-instantiation access permits boundary-state setup without changing the
+// production interface or relying on the object's representation.
+template <class Tag, typename Tag::type member> struct private_member_access {
+    friend typename Tag::type access_member(Tag) { return member; }
+};
+struct revision_member {
+    using type = std::uint64_t vellum::document_state::*;
+    friend type access_member(revision_member);
+};
+template struct private_member_access<revision_member, &vellum::document_state::current_revision>;
+
+#ifdef VELLUM_STATE_EXCEPTION_FAULTS
+bool fail_state_exception_construction = false;
+extern "C" void __real__ZNSt14overflow_errorC1EPKc(std::overflow_error *, const char *);
+extern "C" void __real__ZNSt11logic_errorC1EPKc(std::logic_error *, const char *);
+extern "C" void __wrap__ZNSt14overflow_errorC1EPKc(std::overflow_error *error, const char *what) {
+    if (fail_state_exception_construction) {
+        fail_state_exception_construction = false;
+        throw std::bad_alloc();
+    }
+    __real__ZNSt14overflow_errorC1EPKc(error, what);
+}
+extern "C" void __wrap__ZNSt11logic_errorC1EPKc(std::logic_error *error, const char *what) {
+    if (fail_state_exception_construction) {
+        fail_state_exception_construction = false;
+        throw std::bad_alloc();
+    }
+    __real__ZNSt11logic_errorC1EPKc(error, what);
+}
+#endif
 namespace {
 int checks = 0;
 void require(bool value, const char *message) {
@@ -44,6 +78,102 @@ void state_tests() {
     state.changed();
     state.autosaved(2);
     rejects([&state] { state.autosaved(1); });
+}
+void state_revision_boundary_tests() {
+    const auto maximum = std::numeric_limits<std::uint64_t>::max();
+    vellum::document_state state;
+    state.*access_member(revision_member{}) = maximum - 1;
+    require(state.enable_editor(), "boundary state enters editor");
+    state.autosaved(maximum - 1);
+    require(!state.needs_autosave(), "boundary state starts clean");
+    state.changed();
+    require(state.revision() == maximum && state.needs_autosave(),
+            "last revision is reachable and dirty");
+    bool overflow = false;
+    try {
+        state.changed();
+    } catch (const std::overflow_error &) {
+        overflow = true;
+    }
+    require(overflow && state.revision() == maximum && state.needs_autosave(),
+            "revision overflow rejects without wrapping or clearing dirty state");
+    state.autosaved(maximum);
+    require(!state.needs_autosave(), "maximum revision can be committed");
+    rejects([&state, maximum] { state.autosaved(maximum - 1); });
+    require(state.revision() == maximum && !state.needs_autosave(),
+            "stale maximum-boundary commit leaves state unchanged");
+#ifdef VELLUM_STATE_EXCEPTION_FAULTS
+    for (const bool overflow_error : {false, true}) {
+        fail_state_exception_construction = true;
+        bool allocation_failed = false;
+        try {
+            if (overflow_error) {
+                state.changed();
+            } else {
+                state.autosaved(maximum - 1);
+            }
+        } catch (const std::bad_alloc &) {
+            allocation_failed = true;
+        }
+        fail_state_exception_construction = false;
+        require(allocation_failed && state.revision() == maximum && !state.needs_autosave(),
+                "exception-construction failure leaves revision and committed state unchanged");
+    }
+#endif
+}
+void state_model_tests() {
+    std::size_t states_checked = 0;
+    struct model {
+        bool editor = false;
+        std::uint64_t current = 0;
+        std::uint64_t committed = 0;
+    };
+    const auto explore = [&](const auto &self, vellum::document_state state, model expected,
+                             int remaining) -> void {
+        ++states_checked;
+        require(state.revision() == expected.current, "model current revision mismatch");
+        require((state.mode() == vellum::document_mode::editor) == expected.editor,
+                "model mode mismatch");
+        require(state.needs_autosave() ==
+                    (expected.editor && expected.current != expected.committed),
+                "model dirty state mismatch");
+        if (remaining == 0) {
+            return;
+        }
+        {
+            auto next = state;
+            auto next_model = expected;
+            next.changed();
+            ++next_model.current;
+            self(self, next, next_model, remaining - 1);
+        }
+        {
+            auto next = state;
+            auto next_model = expected;
+            require(next.enable_editor() == !next_model.editor, "model editor transition mismatch");
+            next_model.editor = true;
+            self(self, next, next_model, remaining - 1);
+        }
+        for (const auto revision : {std::uint64_t{0}, expected.current, expected.current + 1}) {
+            auto next = state;
+            auto next_model = expected;
+            const bool valid = revision >= expected.committed && revision <= expected.current;
+            bool accepted = false;
+            try {
+                next.autosaved(revision);
+                accepted = true;
+            } catch (const std::logic_error &) {
+            }
+            require(accepted == valid,
+                    "model accepted an invalid revision or rejected a valid one");
+            if (valid) {
+                next_model.committed = revision;
+            }
+            self(self, next, next_model, remaining - 1);
+        }
+    };
+    explore(explore, vellum::document_state{}, model{}, 6);
+    std::cout << "Revision model: " << states_checked << " states checked\n";
 }
 void autosave_tests(const std::filesystem::path &directory) {
     using namespace std::chrono_literals;
@@ -87,6 +217,43 @@ void autosave_tests(const std::filesystem::path &directory) {
         vellum::autosave_controller bad(state, vellum::snapshot_store(target), {}, validate, now);
     };
     rejects(invalid_serializer);
+    const auto invalid_validator = [&] {
+        vellum::autosave_controller bad(state, vellum::snapshot_store(target), serialize, {}, now);
+    };
+    rejects(invalid_validator);
+    const auto negative_interval = [&] {
+        vellum::autosave_controller bad(state, vellum::snapshot_store(target), serialize, validate,
+                                        now, -1s);
+    };
+    rejects(negative_interval);
+
+    vellum::document_state validation_state;
+    validation_state.enable_editor();
+    validation_state.changed();
+    bool invalid_snapshot = false;
+    int validation_serializations = 0;
+    const auto serialize_candidate = [&] {
+        ++validation_serializations;
+        return invalid_snapshot ? std::string("invalid") : payload("validated");
+    };
+    const auto validation_target = directory / "validation-retry.pdf";
+    vellum::autosave_controller validation_controller(validation_state,
+                                                      vellum::snapshot_store(validation_target),
+                                                      serialize_candidate, validate, now, 10s);
+    require(validation_controller.tick(now + 10s), "initial validation snapshot committed");
+    validation_state.changed();
+    invalid_snapshot = true;
+    rejects([&] { validation_controller.tick(now + 20s); });
+    require(validation_state.needs_autosave(), "validation failure retains dirty revision");
+    require(vellum::read_file(validation_target) == payload("validated"),
+            "validation failure preserves the committed snapshot");
+    invalid_snapshot = false;
+    require(validation_controller.tick(now + 20s), "validation failure does not delay retry");
+    require(!validation_state.needs_autosave() && validation_serializations == 3,
+            "successful retry commits the pending revision once");
+    validation_state.changed();
+    require(!validation_controller.tick(now + 29s), "retry resets timer after success");
+    require(validation_controller.tick(now + 30s), "timer fires at the new boundary");
     vellum::document_state write_failure;
     write_failure.enable_editor();
     write_failure.changed();
@@ -136,6 +303,44 @@ void snapshot_tests(const std::filesystem::path &directory) {
     vellum::atomic_write(directory / "large", large);
     require(vellum::read_file(directory / "large") == large, "multi-block read/write");
     rejects([&] { vellum::atomic_write(directory, "cannot rename over directory"); });
+}
+void storage_boundary_tests(const std::filesystem::path &directory) {
+    const auto exact = directory / "boundary.bin";
+    const std::string data(8192, 'x');
+    vellum::atomic_write(exact, data);
+    require(vellum::read_file(exact, data.size()) == data, "exact read limit is accepted");
+    rejects([&] { vellum::read_file(exact, data.size() - 1); });
+    rejects([&] { vellum::read_file(exact, 0); });
+    const auto empty = directory / "zero-limit.bin";
+    vellum::atomic_write(empty, "");
+    require(vellum::read_file(empty, 0).empty(), "empty file fits zero-byte limit");
+    rejects([&] { vellum::read_file(directory / "missing.bin"); });
+    rejects([&] { vellum::read_file(directory); });
+    rejects([&] { vellum::atomic_write(directory / "absent" / "file", "new"); });
+    require(vellum::read_file(exact) == data, "failed writes preserve unrelated files");
+
+    const auto private_base = directory / "private";
+    const auto first = vellum::create_private_directory(private_base);
+    const auto second = vellum::create_private_directory(private_base);
+    require(first != second && first.parent_path() == private_base &&
+                second.parent_path() == private_base,
+            "recovery sessions receive distinct directories under the requested base");
+    struct stat attributes{};
+    require(::stat(first.c_str(), &attributes) == 0 && S_ISDIR(attributes.st_mode) &&
+                (attributes.st_mode & 0077) == 0,
+            "recovery directory is private");
+    rejects([&] { vellum::create_private_directory(exact); });
+    const auto previous_directory = std::filesystem::current_path();
+    std::filesystem::current_path(directory);
+    try {
+        vellum::atomic_write("relative-snapshot.pdf", "relative data");
+        require(vellum::read_file("relative-snapshot.pdf") == "relative data",
+                "relative target is committed in the current directory");
+    } catch (...) {
+        std::filesystem::current_path(previous_directory);
+        throw;
+    }
+    std::filesystem::current_path(previous_directory);
 }
 void observer_failure_tests(const std::filesystem::path &directory) {
     const auto target = directory / "résumé-文.pdf";
@@ -193,8 +398,11 @@ int main() {
     const std::filesystem::path directory(pattern);
     try {
         state_tests();
+        state_model_tests();
+        state_revision_boundary_tests();
         autosave_tests(directory);
         snapshot_tests(directory);
+        storage_boundary_tests(directory);
         observer_failure_tests(directory);
         crash_test(directory, vellum::commit_point::before_rename);
         crash_test(directory, vellum::commit_point::after_rename);

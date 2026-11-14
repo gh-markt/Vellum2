@@ -35,6 +35,9 @@ void restricted_tests(const std::filesystem::path &root, const std::filesystem::
     vellum::pdf_document copied(temporary / "encrypted-copy.pdf");
     require(!copied.may_edit() && !copied.may_print(), "saved copy must retain restrictions");
     require(!document.authenticate_owner("incorrect"), "wrong owner password");
+    const std::string null_password("test-owner\0suffix", 17);
+    rejects([&] { document.owner_password_valid(null_password); });
+    rejects([&] { document.authenticate_owner(null_password); });
     require(!document.may_edit() && !document.may_print(), "failed authentication granted rights");
     require(document.render(0, .5F).width == 100, "failed authentication corrupted viewing");
     require(document.authenticate_owner("test-owner"), "owner password not accepted");
@@ -46,6 +49,8 @@ void restricted_tests(const std::filesystem::path &root, const std::filesystem::
 void password_tests(const std::filesystem::path &root) {
     rejects([&] { vellum::pdf_document locked(root / "password.pdf"); });
     rejects([&] { vellum::pdf_document locked(root / "password.pdf", "wrong"); });
+    const std::string null_password("test-user\0suffix", 16);
+    rejects([&] { vellum::pdf_document locked(root / "password.pdf", null_password); });
     vellum::pdf_document user(root / "password.pdf", "test-user");
     require(user.may_print() && !user.may_edit(), "user password incorrectly grants owner rights");
     require(!user.authenticate_owner("wrong-owner"), "wrong owner must leave user session intact");
@@ -72,6 +77,10 @@ void annotation_print_flags(const std::filesystem::path &root) {
 }
 void region_tests(const std::filesystem::path &root) {
     const vellum::pdf_document document(root / "print-flags.pdf");
+    vellum::require_print_permission(document, 36);
+    vellum::require_print_permission(document, 600);
+    rejects([&] { vellum::require_print_permission(document, 35); });
+    rejects([&] { vellum::require_print_permission(document, 601); });
     const auto view = document.render_region(0, {30, 130, 40, 40}, 2);
     const auto print = document.render_print_region(0, {30, 130, 40, 40}, 2, 144);
     const std::size_t middle = (40 * 80 + 40) * 3;
@@ -89,7 +98,16 @@ void region_tests(const std::filesystem::path &root) {
             "print prohibition must not block viewing regions");
     rejects([&] { restricted.render_print_region(0, {0, 0, 100, 100}, 1, 72); });
     const vellum::pdf_document low(root / "low-quality-print.pdf");
+    require(low.render_print_region(0, {0, 0, 10, 10}, 1, 150).width == 10,
+            "low-quality print must permit the 150 DPI boundary");
+    rejects([&] { low.render_print_region(0, {0, 0, 10, 10}, 1, 151); });
     rejects([&] { low.render_print_region(0, {0, 0, 10, 10}, 1, 300); });
+    const float maximum_low_scale = 150.0F / 72.0F;
+    require(low.render_for_print(0, maximum_low_scale).width > 0,
+            "low-quality whole-page print must accept the 150 DPI boundary");
+    rejects([&] { low.render_for_print(0, maximum_low_scale + .01F); });
+    require(document.render_for_print(0, maximum_low_scale + .01F).width > 0,
+            "unrestricted whole-page print must permit higher resolutions");
 }
 
 void independent_save_and_autosave(const std::filesystem::path &root,

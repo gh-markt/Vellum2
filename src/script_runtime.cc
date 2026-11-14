@@ -36,7 +36,6 @@ int vellum::run_v8_worker() {
     if (::setrlimit(RLIMIT_CORE, &no_core) != 0 || ::prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) {
         return 2;
     }
-    v8::V8::InitializeICUDefaultLocation(nullptr);
     auto platform = v8::platform::NewDefaultPlatform();
     v8::V8::InitializePlatform(platform.get());
     if (!v8::V8::Initialize()) {
@@ -51,10 +50,21 @@ int vellum::run_v8_worker() {
     if (isolate == nullptr) {
         return 2;
     }
-    const auto handler = [isolate](std::string_view source) { return execute(isolate, source); };
+    bool cleanup_started = false;
+    const auto cleanup = [isolate, &cleanup_started] {
+        cleanup_started = true;
+        isolate->Dispose();
+        v8::V8::Dispose();
+        v8::V8::DisposePlatform();
+    };
+    const auto handler = [isolate, &cleanup](std::string_view source) {
+        auto result = execute(isolate, source);
+        cleanup();
+        return result;
+    };
     const int status = vellum::serve_script_request(handler);
-    isolate->Dispose();
-    v8::V8::Dispose();
-    v8::V8::DisposePlatform();
+    if (!cleanup_started) {
+        cleanup();
+    }
     return status;
 }

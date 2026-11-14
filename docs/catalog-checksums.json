@@ -1,6 +1,4 @@
 {
   "reader-features.json": "d339e78aba726b7a4a09f2454805c19d7ce0c33f13ba297a091a098b88239eca",
-  "reader-features.supplied.txt": "d339e78aba726b7a4a09f2454805c19d7ce0c33f13ba297a091a098b88239eca",
-  "acrobat-features.json": "21a9786ce643fa271d7f7012afb5d47568d8523de445248736d143a22d306495",
-  "acrobat-features.supplied.txt": "785389c0572b802595fe7b80e245aef75aa60701a2dee775d8a3e9bc3ecf6caa"
+  "acrobat-features.json": "21a9786ce643fa271d7f7012afb5d47568d8523de445248736d143a22d306495"
 }

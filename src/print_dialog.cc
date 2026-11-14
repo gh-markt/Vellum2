@@ -1,8 +1,13 @@
 #include "vellum/print_dialog.hh"
+#include "vellum/atomic_file.hh"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <memory>
 #include <stdexcept>
 #include <wx/dcbuffer.h>
+#include <wx/log.h>
+#include <wx/mstream.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
 namespace vellum {
@@ -13,86 +18,122 @@ class print_preview_panel : public wxPanel {
         : wxPanel(parent), job(job), painter(painter), valid(valid), side(side) {
         this->SetMinSize(wxSize(380, 400));
         this->SetBackgroundStyle(wxBG_STYLE_PAINT);
-        const auto resize = [this](wxSizeEvent &event) {
-            event.Skip();
-            this->Refresh();
-        };
-        this->Bind(wxEVT_SIZE, resize);
-        this->Bind(wxEVT_PAINT, &print_preview_panel::on_paint, this);
     }
 
   private:
+    void on_size(wxSizeEvent &event) {
+        event.Skip();
+        this->Refresh();
+    }
     void on_paint(wxPaintEvent &) {
-        wxAutoBufferedPaintDC dc(this);
-        dc.SetBackground(wxBrush(wxColour(95, 100, 108)));
-        dc.Clear();
-        if (!this->valid) {
-            return;
-        }
         try {
-            const auto size = this->GetClientSize();
-            const auto paper = this->job.options.paper;
-            const double scale =
-                std::min((size.x - 24) / paper.width, (size.y - 24) / paper.height);
-            if (scale <= 0) {
+            wxAutoBufferedPaintDC dc(this);
+            dc.SetBackground(wxBrush(wxColour(95, 100, 108)));
+            dc.Clear();
+            if (!this->valid) {
                 return;
             }
-            const int width = static_cast<int>(paper.width * scale);
-            const int height = static_cast<int>(paper.height * scale);
-            this->painter.paint(dc, this->job, this->side,
-                                wxRect((size.x - width) / 2, (size.y - height) / 2, width, height),
-                                72, true);
+            try {
+                const auto size = this->GetClientSize();
+                const auto paper = this->job.options.paper;
+                const double scale =
+                    std::min((size.x - 24) / paper.width, (size.y - 24) / paper.height);
+                if (scale <= 0) {
+                    return;
+                }
+                const int width = static_cast<int>(paper.width * scale);
+                const int height = static_cast<int>(paper.height * scale);
+                this->painter.paint(
+                    dc, this->job, this->side,
+                    wxRect((size.x - width) / 2, (size.y - height) / 2, width, height), 72, true);
+            } catch (const std::exception &error) {
+                dc.SetTextForeground(*wxWHITE);
+                dc.DrawText("Preview failed: " + wxString::FromUTF8(error.what()), 12, 12);
+            }
         } catch (const std::exception &error) {
-            dc.SetTextForeground(*wxWHITE);
-            dc.DrawText("Preview failed: " + wxString::FromUTF8(error.what()), 12, 12);
+            try {
+                wxLogError("Preview failed: %s", wxString::FromUTF8(error.what()));
+            } catch (...) {
+                // Reporting can itself fail under resource exhaustion.
+            }
         }
     }
+    wxDECLARE_EVENT_TABLE();
     const print_job &job;
     sheet_painter &painter;
     const bool &valid;
     const std::size_t &side;
 };
-namespace {
-wxChoice *choice(wxWindow *parent, wxFlexGridSizer *grid, const char *label, const char *name,
-                 std::initializer_list<const char *> values, int initial = 0) {
-    grid->Add(new wxStaticText(parent, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
-    auto *control = new wxChoice(parent, wxID_ANY);
-    for (const auto *text : values) {
-        control->Append(text);
+// clang-format off
+wxBEGIN_EVENT_TABLE(print_preview_panel, wxPanel)
+    EVT_SIZE(print_preview_panel::on_size)
+    EVT_PAINT(print_preview_panel::on_paint)
+wxEND_EVENT_TABLE()
+
+wxBEGIN_EVENT_TABLE(print_dialog, wxDialog)
+    EVT_CHOICE(wxID_ANY, print_dialog::on_change)
+    EVT_TEXT(wxID_ANY, print_dialog::on_change)
+    EVT_CHECKBOX(wxID_ANY, print_dialog::on_change)
+    EVT_SPINCTRL(wxID_ANY, print_dialog::on_spin)
+    EVT_SPINCTRLDOUBLE(wxID_ANY, print_dialog::on_decimal_spin)
+    EVT_TIMER(wxID_ANY, print_dialog::on_preview_timer)
+    EVT_BUTTON(wxID_SETUP, print_dialog::on_properties)
+    EVT_BUTTON(wxID_PRINT, print_dialog::on_submit)
+    EVT_BUTTON(wxID_SAVEAS, print_dialog::on_save_preview)
+    EVT_BUTTON(wxID_BACKWARD, print_dialog::on_previous_side)
+    EVT_BUTTON(wxID_FORWARD, print_dialog::on_next_side)
+wxEND_EVENT_TABLE()
+    // clang-format on
+
+    namespace {
+    void report_print_error(wxWindow * parent, const char *caption, const std::exception &error) {
+        try {
+            wxMessageBox(wxString::FromUTF8(error.what()), wxString::FromUTF8(caption),
+                         wxOK | wxICON_ERROR, parent);
+        } catch (...) {
+            std::fprintf(stderr, "%s: %s\n", caption, error.what());
+        }
     }
-    control->SetSelection(initial);
-    control->SetName(name);
-    grid->Add(control, 1, wxEXPAND);
-    return control;
-}
-wxSpinCtrlDouble *decimal(wxWindow *parent, wxFlexGridSizer *grid, const char *label,
-                          const char *name, double value, double maximum) {
-    grid->Add(new wxStaticText(parent, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
-    auto *control = new wxSpinCtrlDouble(parent, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize,
-                                         wxSP_ARROW_KEYS, 0, maximum, value, 1);
-    control->SetDigits(1);
-    control->SetName(name);
-    grid->Add(control, 1, wxEXPAND);
-    return control;
-}
-wxSpinCtrl *integer(wxWindow *parent, wxFlexGridSizer *grid, const char *label, const char *name,
-                    int value, int maximum) {
-    grid->Add(new wxStaticText(parent, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
-    auto *control = new wxSpinCtrl(parent, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize,
-                                   wxSP_ARROW_KEYS, 1, maximum, value);
-    control->SetName(name);
-    grid->Add(control, 1, wxEXPAND);
-    return control;
-}
-wxCheckBox *check(wxWindow *parent, wxFlexGridSizer *grid, const char *label, const char *name,
-                  bool value = false) {
-    auto *control = new wxCheckBox(parent, wxID_ANY, label);
-    control->SetValue(value);
-    control->SetName(name);
-    grid->Add(control, 0, wxEXPAND);
-    grid->AddSpacer(1);
-    return control;
-}
+    wxChoice *choice(wxWindow * parent, wxFlexGridSizer * grid, const char *label, const char *name,
+                     std::initializer_list<const char *> values, int initial = 0) {
+        grid->Add(new wxStaticText(parent, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+        auto *control = new wxChoice(parent, wxID_ANY);
+        for (const auto *text : values) {
+            control->Append(text);
+        }
+        control->SetSelection(initial);
+        control->SetName(name);
+        grid->Add(control, 1, wxEXPAND);
+        return control;
+    }
+    wxSpinCtrlDouble *decimal(wxWindow * parent, wxFlexGridSizer * grid, const char *label,
+                              const char *name, double value, double maximum) {
+        grid->Add(new wxStaticText(parent, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+        auto *control = new wxSpinCtrlDouble(parent, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize,
+                                             wxSP_ARROW_KEYS, 0, maximum, value, 1);
+        control->SetDigits(1);
+        control->SetName(name);
+        grid->Add(control, 1, wxEXPAND);
+        return control;
+    }
+    wxSpinCtrl *integer(wxWindow * parent, wxFlexGridSizer * grid, const char *label,
+                        const char *name, int value, int maximum) {
+        grid->Add(new wxStaticText(parent, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
+        auto *control = new wxSpinCtrl(parent, wxID_ANY, {}, wxDefaultPosition, wxDefaultSize,
+                                       wxSP_ARROW_KEYS, 1, maximum, value);
+        control->SetName(name);
+        grid->Add(control, 1, wxEXPAND);
+        return control;
+    }
+    wxCheckBox *check(wxWindow * parent, wxFlexGridSizer * grid, const char *label,
+                      const char *name, bool value = false) {
+        auto *control = new wxCheckBox(parent, wxID_ANY, label);
+        control->SetValue(value);
+        control->SetName(name);
+        grid->AddSpacer(1);
+        grid->Add(control, 0, wxEXPAND);
+        return control;
+    }
 } // namespace
 print_dialog::print_dialog(wxWindow *parent, pdf_document &document, printer_settings &printer,
                            int current_page)
@@ -104,27 +145,36 @@ print_dialog::print_dialog(wxWindow *parent, pdf_document &document, printer_set
     for (int page = 0; page < document.pages(); ++page) {
         this->dimensions.push_back(document.dimensions(page));
     }
-    auto *root = new wxBoxSizer(wxVERTICAL);
-    auto *content = new wxBoxSizer(wxHORIZONTAL);
+    auto root = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    auto content = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     auto *controls = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(370, 500));
     controls->SetScrollRate(0, 12);
     controls->SetName("print-settings-panel");
     controls->ShowScrollbars(wxSHOW_SB_NEVER, wxSHOW_SB_ALWAYS);
-    auto *grid = new wxFlexGridSizer(2, 6, 8);
+    auto grid = std::make_unique<wxFlexGridSizer>(2, 6, 8);
     grid->AddGrowableCol(1);
-    this->build_controls(controls, grid);
-    controls->SetSizer(grid);
-    controls->SetMinSize(wxSize(std::max(370, grid->GetMinSize().x + 20), -1));
+    this->build_controls(controls, grid.get());
+    auto settings_padding = std::make_unique<wxBoxSizer>(wxVERTICAL);
+    settings_padding->Add(grid.get(), 0, wxEXPAND | wxALL, controls->FromDIP(16));
+    grid.release();
+    auto *padding = settings_padding.get();
+    controls->SetSizer(padding);
+    settings_padding.release();
+    controls->SetMinSize(wxSize(padding->GetMinSize().x + controls->FromDIP(24), -1));
     controls->FitInside();
     content->Add(controls, 0, wxEXPAND | wxALL, 12);
     this->preview = new print_preview_panel(this, this->current_job, this->painter,
                                             this->plan_valid, this->preview_side);
     content->Add(this->preview, 1, wxEXPAND | wxALL, 12);
-    root->Add(content, 1, wxEXPAND);
-    this->build_footer(root);
-    this->SetSizer(root);
+    root->Add(content.get(), 1, wxEXPAND);
+    content.release();
+    this->build_footer(root.get());
+    this->SetSizer(root.get());
+    root.release();
+    this->Layout();
+    controls->FitInside();
     this->SetMinSize(wxSize(880, 650));
-    this->connect_controls();
+    this->controls_ready = true;
     this->regenerate_preview();
 }
 print_dialog::~print_dialog() {
@@ -137,9 +187,9 @@ void print_dialog::build_controls(wxWindow *controls, wxFlexGridSizer *grid) {
     this->selection = choice(controls, grid, "Pages", "print-selection",
                              {"All pages", "Current page", "Custom ranges"});
     grid->Add(new wxStaticText(controls, wxID_ANY, "Ranges"), 0, wxALIGN_CENTER_VERTICAL);
-    this->ranges =
-        new wxTextCtrl(controls, wxID_ANY, "1-" + std::to_string(this->document.pages()));
+    this->ranges = new wxTextCtrl(controls, wxID_ANY);
     this->ranges->SetName("print-ranges");
+    this->ranges->SetToolTip("Enter pages in print order. Consecutive commas insert blank pages.");
     grid->Add(this->ranges, 1, wxEXPAND);
     this->parity = choice(controls, grid, "Within selection", "print-parity",
                           {"All pages", "Odd pages", "Even pages"});
@@ -150,6 +200,10 @@ void print_dialog::build_controls(wxWindow *controls, wxFlexGridSizer *grid) {
     this->percentage = decimal(controls, grid, "Scale %", "print-percentage", 100, 1000);
     this->paper = choice(controls, grid, "Paper", "print-paper",
                          {"A4", "Letter", "A3", "Legal", "Printer properties"});
+    if (this->printer.selected()) {
+        this->paper->SetSelection(4);
+        this->paper->Disable();
+    }
     this->orientation =
         choice(controls, grid, "Orientation", "print-orientation", {"Portrait", "Landscape"});
     this->margin = decimal(controls, grid, "Margins (mm)", "print-margin", 10, 100);
@@ -183,17 +237,18 @@ void print_dialog::build_controls(wxWindow *controls, wxFlexGridSizer *grid) {
         check(controls, grid, "Reverse manual back-side order", "print-reverse-backs");
 }
 void print_dialog::build_footer(wxBoxSizer *root) {
-    auto *navigation = new wxBoxSizer(wxHORIZONTAL);
+    auto navigation = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     auto *previous = new wxButton(this, wxID_BACKWARD, "Previous side");
     auto *next = new wxButton(this, wxID_FORWARD, "Next side");
     this->side_label = new wxStaticText(this, wxID_ANY, {});
     navigation->Add(previous, 0, wxRIGHT, 8);
     navigation->Add(this->side_label, 1, wxALIGN_CENTER_VERTICAL);
     navigation->Add(next, 0, wxLEFT, 8);
-    root->Add(navigation, 0, wxEXPAND | wxLEFT | wxRIGHT, 12);
+    root->Add(navigation.get(), 0, wxEXPAND | wxLEFT | wxRIGHT, 12);
+    navigation.release();
     this->status = new wxStaticText(this, wxID_ANY, {});
     root->Add(this->status, 0, wxEXPAND | wxALL, 12);
-    auto *actions = new wxBoxSizer(wxHORIZONTAL);
+    auto actions = std::make_unique<wxBoxSizer>(wxHORIZONTAL);
     auto *properties = new wxButton(this, wxID_SETUP, "Printer & properties...");
     auto *save = new wxButton(this, wxID_SAVEAS, "Save preview image...");
     this->print_button = new wxButton(this, wxID_PRINT, "Print");
@@ -203,72 +258,173 @@ void print_dialog::build_footer(wxBoxSizer *root) {
     actions->AddStretchSpacer();
     actions->Add(new wxButton(this, wxID_CANCEL, "Cancel"), 0, wxRIGHT, 8);
     actions->Add(this->print_button);
-    root->Add(actions, 0, wxEXPAND | wxALL, 12);
+    root->Add(actions.get(), 0, wxEXPAND | wxALL, 12);
+    actions.release();
 }
-void print_dialog::connect_controls() {
-    const auto change = [this](wxCommandEvent &event) {
-        if (event.GetEventObject() == this->layout) {
-            if (this->layout->GetSelection() == 2) {
-                this->orientation->SetSelection(1);
-                this->duplex->SetSelection(2);
-            }
-            if (this->layout->GetSelection() == 3) {
-                this->duplex->SetSelection(0);
-                this->sides->SetSelection(0);
-            }
+void print_dialog::on_change(wxCommandEvent &event) {
+    if (!this->controls_ready) {
+        event.Skip();
+        return;
+    }
+    if (event.GetEventObject() == this->layout) {
+        if (this->layout->GetSelection() == 2) {
+            this->orientation->SetSelection(1);
         }
-        this->settings_changed();
-    };
-    const auto spin = [this](wxSpinEvent &) { this->settings_changed(); };
-    const auto decimal_spin = [this](wxSpinDoubleEvent &) { this->settings_changed(); };
-    this->Bind(wxEVT_CHOICE, change);
-    this->Bind(wxEVT_TEXT, change);
-    this->Bind(wxEVT_CHECKBOX, change);
-    this->Bind(wxEVT_SPINCTRL, spin);
-    this->Bind(wxEVT_SPINCTRLDOUBLE, decimal_spin);
-    this->Bind(wxEVT_TIMER, &print_dialog::on_preview_timer, this);
-    const auto properties = [this](wxCommandEvent &) { this->choose_printer(); };
-    const auto submit = [this](wxCommandEvent &) { this->submit(); };
-    const auto save = [this](wxCommandEvent &) { this->save_preview(); };
-    const auto previous = [this](wxCommandEvent &) {
-        if (this->preview_side > 0) {
-            --this->preview_side;
+        if (this->layout->GetSelection() == 3) {
+            this->duplex->SetSelection(0);
+            this->sides->SetSelection(0);
+        }
+    }
+    if (event.GetEventObject() == this->selection) {
+        if (this->selection->GetSelection() != 2) {
+            this->ranges->ChangeValue({});
+        }
+        if (this->selection->GetSelection() != 1) {
+            this->parity->SetSelection(0);
+        }
+    }
+    const bool booklet = this->layout->GetSelection() == 2;
+    const bool multiple = this->layout->GetSelection() == 1;
+    if (booklet) {
+        this->duplex->SetSelection(2);
+    }
+    if (booklet || multiple) {
+        this->parity->SetSelection(0);
+    }
+    const bool filtered = this->parity->GetSelection() != 0;
+    if (!booklet && filtered) {
+        this->duplex->SetSelection(0);
+    }
+    this->duplex->Enable(!booklet && !filtered);
+    this->parity->Enable(!booklet && !multiple);
+    this->settings_changed();
+}
+void print_dialog::on_spin(wxSpinEvent &event) {
+    if (!this->controls_ready) {
+        event.Skip();
+        return;
+    }
+    this->settings_changed();
+}
+void print_dialog::on_decimal_spin(wxSpinDoubleEvent &event) {
+    if (!this->controls_ready) {
+        event.Skip();
+        return;
+    }
+    this->settings_changed();
+}
+void print_dialog::on_properties(wxCommandEvent &) {
+    try {
+        this->choose_printer();
+    } catch (const std::exception &error) {
+        report_print_error(this, "Printer selection failed", error);
+    }
+}
+void print_dialog::on_submit(wxCommandEvent &) {
+    this->submit();
+}
+void print_dialog::on_save_preview(wxCommandEvent &) {
+    this->save_preview();
+}
+void print_dialog::on_previous_side(wxCommandEvent &) {
+    this->navigate_preview(false);
+}
+void print_dialog::on_next_side(wxCommandEvent &) {
+    this->navigate_preview(true);
+}
+void print_dialog::navigate_preview(bool forward) {
+    if ((!forward && this->preview_side == 0) ||
+        (forward && this->preview_side + 1 >= this->current_job.sides.size())) {
+        return;
+    }
+    const auto previous = this->preview_side;
+    this->preview_side = forward ? previous + 1 : previous - 1;
+    try {
+        this->update_side_label();
+        this->preview->Refresh();
+    } catch (const std::exception &error) {
+        this->preview_side = previous;
+        try {
             this->update_side_label();
             this->preview->Refresh();
+        } catch (...) {
+            this->plan_valid = false;
+            try {
+                this->print_button->Disable();
+            } catch (...) {
+                // Keep the plan invalid even if the native control cannot be updated.
+            }
         }
-    };
-    const auto next = [this](wxCommandEvent &) {
-        if (this->preview_side + 1 < this->current_job.sides.size()) {
-            ++this->preview_side;
-            this->update_side_label();
-            this->preview->Refresh();
-        }
-    };
-    this->Bind(wxEVT_BUTTON, properties, wxID_SETUP);
-    this->Bind(wxEVT_BUTTON, submit, wxID_PRINT);
-    this->Bind(wxEVT_BUTTON, save, wxID_SAVEAS);
-    this->Bind(wxEVT_BUTTON, previous, wxID_BACKWARD);
-    this->Bind(wxEVT_BUTTON, next, wxID_FORWARD);
+        report_print_error(this, "Preview update failed", error);
+    }
 }
 void print_dialog::settings_changed() {
     this->plan_valid = false;
-    this->print_button->Disable();
-    this->status->SetLabel("Updating sheet preview...");
-    this->timer.StartOnce(100);
+    try {
+        this->print_button->Disable();
+        this->status->SetLabel("Updating sheet preview...");
+        if (this->timer.StartOnce(100)) {
+            return;
+        }
+    } catch (const std::exception &) {
+        // Recover immediately if the UI update or timer could not be started.
+    }
+    this->regenerate_preview_safely();
 }
 void print_dialog::on_preview_timer(wxTimerEvent &) {
-    this->regenerate_preview();
+    this->regenerate_preview_safely();
+}
+void print_dialog::regenerate_preview_safely() {
+    try {
+        this->regenerate_preview();
+    } catch (const std::exception &error) {
+        this->plan_valid = false;
+        try {
+            this->print_button->Disable();
+            this->status->SetLabel(wxString::FromUTF8(error.what()));
+            this->update_side_label();
+            this->preview->Refresh();
+        } catch (const std::exception &reporting_error) {
+            report_print_error(this, "Preview update failed", reporting_error);
+        }
+    }
 }
 print_options print_dialog::read_options() {
     print_options options;
+    const int layout = this->layout->GetSelection();
+    const int scaling = this->scaling->GetSelection();
+    const auto valid_decimal = [](const wxSpinCtrlDouble *control) {
+        double value = 0;
+        return control->GetTextValue().ToDouble(&value) && std::isfinite(value) &&
+               value >= control->GetMin() && value <= control->GetMax();
+    };
+    const auto valid_integer = [](const wxSpinCtrl *control) {
+        long value = 0;
+        return control->GetTextValue().ToLong(&value) && value >= control->GetMin() &&
+               value <= control->GetMax();
+    };
+    if (!valid_decimal(this->margin) || !valid_decimal(this->gutter) ||
+        !valid_integer(this->copies) ||
+        ((scaling == 3 || layout == 3) && !valid_decimal(this->percentage)) ||
+        (layout == 1 && (!valid_integer(this->columns) || !valid_integer(this->rows))) ||
+        (layout == 3 && !valid_decimal(this->overlap))) {
+        throw std::invalid_argument("invalid numeric print setting");
+    }
     const page_extent formats[] = {
         {595.2756, 841.8898}, {612, 792}, {841.8898, 1190.5512}, {612, 1008}};
-    const int format = this->paper->GetSelection();
+    const int format = this->printer.selected() ? 4 : this->paper->GetSelection();
+    if (format < 0 || format > 4) {
+        throw std::invalid_argument("invalid paper format");
+    }
     options.paper = formats[std::min(format, 3)];
-    if (this->orientation->GetSelection() == 1) {
+    const int orientation = this->orientation->GetSelection();
+    if (orientation < 0 || orientation > 1) {
+        throw std::invalid_argument("invalid paper orientation");
+    }
+    if (orientation == 1) {
         std::swap(options.paper.width, options.paper.height);
     }
-    this->printer.set_paper(format, this->orientation->GetSelection() == 1);
+    this->printer.set_paper(format, orientation == 1);
     options.printable = {0, 0, options.paper.width, options.paper.height};
     options = this->printer.measure(options);
     const double margin = this->margin->GetValue() * 72 / 25.4;
@@ -280,9 +436,14 @@ print_options print_dialog::read_options() {
     options.printable.y = std::max(options.printable.y, margin);
     options.printable.width = right - options.printable.x;
     options.printable.height = bottom - options.printable.y;
-    options.layout = static_cast<print_layout>(this->layout->GetSelection());
-    options.scaling = static_cast<print_scale>(this->scaling->GetSelection());
+    options.layout = static_cast<print_layout>(layout);
+    options.scaling = static_cast<print_scale>(scaling);
     options.percentage = this->percentage->GetValue();
+    if (scaling != 3 && layout != 3 &&
+        (!std::isfinite(options.percentage) || options.percentage < 1 ||
+         options.percentage > 1000)) {
+        options.percentage = 100;
+    }
     options.columns = this->columns->GetValue();
     options.rows = this->rows->GetValue();
     options.order = static_cast<nup_order>(this->order->GetSelection());
@@ -308,6 +469,9 @@ void print_dialog::regenerate_preview() {
     try {
         const auto options = this->read_options();
         const int selection = this->selection->GetSelection();
+        if (selection < 0 || selection > 2) {
+            throw std::invalid_argument("invalid page selection mode");
+        }
         const auto expression = selection == 0   ? "1-" + std::to_string(this->document.pages())
                                 : selection == 1 ? std::to_string(this->current_page)
                                                  : this->ranges->GetValue().ToStdString(wxConvUTF8);
@@ -324,6 +488,7 @@ void print_dialog::regenerate_preview() {
                                      "before printing. Driver layout should be 1 page per sheet.");
         this->status->Wrap(this->GetClientSize().x - 32);
     } catch (const std::exception &error) {
+        this->plan_valid = false;
         this->print_button->Disable();
         this->status->SetLabel(wxString::FromUTF8(error.what()));
     }
@@ -371,11 +536,16 @@ void print_dialog::choose_printer() {
     }
     const auto settings = this->printer.preferences();
     this->paper->SetSelection(4);
+    this->paper->Disable();
     this->orientation->SetSelection(settings.landscape ? 1 : 0);
     this->copies->SetValue(settings.copies);
     this->collate->SetValue(settings.collate);
     this->grayscale->SetValue(settings.grayscale);
-    if (requested.duplex != print_duplex::manual) {
+    if (this->layout->GetSelection() == 2) {
+        this->duplex->SetSelection(2);
+    } else if (this->parity->GetSelection() != 0) {
+        this->duplex->SetSelection(0);
+    } else if (requested.duplex != print_duplex::manual) {
         this->duplex->SetSelection(static_cast<int>(settings.duplex));
     }
     this->regenerate_preview();
@@ -422,8 +592,7 @@ void print_dialog::submit() {
         }
         this->EndModal(wxID_OK);
     } catch (const std::exception &error) {
-        wxMessageBox(wxString::FromUTF8(error.what()), "Printing failed", wxOK | wxICON_ERROR,
-                     this);
+        report_print_error(this, "Printing failed", error);
     }
 }
 void print_dialog::export_preview(const std::filesystem::path &path) {
@@ -435,25 +604,37 @@ void print_dialog::export_preview(const std::filesystem::path &path) {
     const double scale = std::min(1200 / paper.width, 1200 / paper.height);
     wxBitmap image(std::max(1, static_cast<int>(paper.width * scale)),
                    std::max(1, static_cast<int>(paper.height * scale)), 24);
+    if (!image.IsOk()) {
+        throw std::runtime_error("cannot allocate preview image");
+    }
     wxMemoryDC dc(image);
     this->painter.paint(dc, this->current_job, this->preview_side,
                         wxRect(0, 0, image.GetWidth(), image.GetHeight()), 72, false);
     dc.SelectObject(wxNullBitmap);
-    if (!image.SaveFile(wxString::FromUTF8(path.string()), wxBITMAP_TYPE_PNG)) {
+    const auto converted = image.ConvertToImage();
+    if (!converted.IsOk()) {
+        throw std::runtime_error("cannot convert preview image");
+    }
+    wxMemoryOutputStream encoded;
+    if (!converted.SaveFile(encoded, wxBITMAP_TYPE_PNG) || !encoded.IsOk()) {
         throw std::runtime_error("cannot save preview image");
     }
+    std::string bytes(encoded.GetSize(), '\0');
+    if (encoded.CopyTo(bytes.data(), bytes.size()) != bytes.size()) {
+        throw std::runtime_error("cannot read encoded preview image");
+    }
+    atomic_write(path, bytes);
 }
 void print_dialog::save_preview() {
-    wxFileDialog dialog(this, "Save current sheet preview", {}, {}, "PNG images (*.png)|*.png",
-                        wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-    if (dialog.ShowModal() != wxID_OK) {
-        return;
-    }
     try {
+        wxFileDialog dialog(this, "Save current sheet preview", {}, {}, "PNG images (*.png)|*.png",
+                            wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+        if (dialog.ShowModal() != wxID_OK) {
+            return;
+        }
         this->export_preview(std::filesystem::path(dialog.GetPath().ToStdString(wxConvUTF8)));
     } catch (const std::exception &error) {
-        wxMessageBox(wxString::FromUTF8(error.what()), "Preview export failed", wxOK | wxICON_ERROR,
-                     this);
+        report_print_error(this, "Preview export failed", error);
     }
 }
 } // namespace vellum

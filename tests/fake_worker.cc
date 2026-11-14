@@ -37,6 +37,9 @@ int main() {
         if (source == "error") {
             return {false, "expected failure"};
         }
+        if (source == "maximum output") {
+            return {true, std::string(1024 * 1024, 'z')};
+        }
         if (source == "crash") {
             std::_Exit(9);
         }

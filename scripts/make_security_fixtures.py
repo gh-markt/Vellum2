@@ -14,7 +14,8 @@ profiles=[('restricted.pdf','',Permission.FILL_FORM_FIELDS),
           ('password.pdf','test-user',Permission.PRINT|Permission.EXTRACT),
           ('edit-no-extraction.pdf','',Permission.MODIFY),
           ('read-only-copy.pdf','',Permission.EXTRACT|Permission.PRINT),
-          ('low-quality-print.pdf','',Permission.PRINT)]
+          ('low-quality-print.pdf','',Permission.PRINT),
+          ('long-owner.pdf','',Permission.FILL_FORM_FIELDS)]
 for name,user,permissions in profiles:
     writer=PdfWriter(clone_from=PdfReader(source))
     if name=='restricted.pdf':
@@ -26,7 +27,8 @@ for name,user,permissions in profiles:
         writer.pages[0][NameObject('/Annots')]=ArrayObject([reference])
         writer._root_object[NameObject('/AcroForm')]=DictionaryObject({NameObject('/Fields'):ArrayObject([reference]),
             NameObject('/DA'):TextStringObject('/Helv 12 Tf 0 g')})
-    writer.encrypt(user_password=user,owner_password='test-owner',permissions_flag=permissions,algorithm='AES-128')
+    owner = 'vellum-long-owner-password-test' if name == 'long-owner.pdf' else 'test-owner'
+    writer.encrypt(user_password=user,owner_password=owner,permissions_flag=permissions,algorithm='AES-128')
     with (output/name).open('wb') as stream:writer.write(stream)
 
 # Explicit appearances isolate print-flag behavior from font/appearance generation.

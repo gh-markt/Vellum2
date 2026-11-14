@@ -1,6 +1,11 @@
 #include "vellum/script_process.hh"
+#include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
 namespace {
 void require(bool value) {
     if (!value) {
@@ -15,6 +20,34 @@ template <class Operation> void rejects(Operation operation) {
         rejected = true;
     }
     require(rejected);
+}
+void descriptor_exhaustion(const std::filesystem::path &worker) {
+    const auto child = ::fork();
+    require(child >= 0);
+    if (child == 0) {
+        struct rlimit limit{};
+        if (::getrlimit(RLIMIT_NOFILE, &limit) != 0) {
+            std::_Exit(2);
+        }
+        const auto original = limit;
+        limit.rlim_cur = 3;
+        if (::setrlimit(RLIMIT_NOFILE, &limit) != 0) {
+            std::_Exit(2);
+        }
+        bool rejected = false;
+        try {
+            vellum::run_script_process(worker, "resource exhaustion");
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        if (::setrlimit(RLIMIT_NOFILE, &original) != 0) {
+            std::_Exit(2);
+        }
+        std::_Exit(rejected ? 0 : 1);
+    }
+    int status = 0;
+    require(::waitpid(child, &status, 0) == child);
+    require(WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 } // namespace
 int main(int argc, char **argv) {
@@ -35,9 +68,21 @@ int main(int argc, char **argv) {
         }
         const std::string maximum(1024 * 1024, 'x');
         require(vellum::run_script_process(worker, maximum).text == maximum);
+        require(vellum::run_script_process(worker, "maximum output").text ==
+                std::string(1024 * 1024, 'z'));
+        const std::string binary("a\0b", 3);
+        require(vellum::run_script_process(worker, binary).text == binary);
         rejects([&] { vellum::run_script_process(worker, maximum + "x"); });
         rejects([&] { vellum::run_script_process(worker, "x", std::chrono::milliseconds(0)); });
+        rejects([&] { vellum::run_script_process(worker, "x", std::chrono::milliseconds(-1)); });
+        rejects([&] {
+            vellum::run_script_process(
+                worker, "x",
+                std::chrono::milliseconds(static_cast<long long>(std::numeric_limits<int>::max()) +
+                                          1));
+        });
         rejects([&] { vellum::run_script_process("/missing/vellum-worker", "x"); });
+        descriptor_exhaustion(worker);
         rejects(
             [&] { vellum::run_script_process(worker, "hang", std::chrono::milliseconds(100)); });
         rejects(

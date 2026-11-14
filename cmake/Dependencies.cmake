@@ -1,45 +1,83 @@
-# Prefer explicitly supplied compatible static installations, otherwise build local copies.
-# The bootstrap's V8 ABI uses no pointer compression, no V8 sandbox, embedded ICU/startup data.
+# Use explicit installations when supplied. Otherwise link the prepared prefix.
+set(_dependency_lock "${PROJECT_SOURCE_DIR}/docs/dependencies.lock.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_dependency_lock}")
+file(READ "${_dependency_lock}" _dependency_config)
+string(JSON _mupdf_archive GET "${_dependency_config}" mupdf_artifacts 0)
+string(JSON _mupdf_third_archive GET "${_dependency_config}" mupdf_artifacts 1)
+string(JSON _mupdf_fitz_header GET "${_dependency_config}" mupdf_artifacts 2)
+string(JSON _mupdf_pdf_header GET "${_dependency_config}" mupdf_artifacts 3)
+string(JSON _v8_archive GET "${_dependency_config}" v8_artifacts 0)
+string(JSON _v8_header GET "${_dependency_config}" v8_artifacts 1)
 set(_mupdf_root "${VELLUM_MUPDF_ROOT}")
 set(_v8_root "${VELLUM_V8_ROOT}")
-if(NOT _mupdf_root)
+
+if(VELLUM_MUPDF_ROOT)
+    if(NOT EXISTS "${_mupdf_root}/${_mupdf_fitz_header}" OR
+       NOT EXISTS "${_mupdf_root}/${_mupdf_pdf_header}")
+        message(FATAL_ERROR "VELLUM_MUPDF_ROOT has no MuPDF headers")
+    endif()
+else()
     set(_mupdf_root "${VELLUM_DEPS_PREFIX}")
-endif()
-if(NOT _v8_root)
-    set(_v8_root "${VELLUM_DEPS_PREFIX}")
-endif()
-if(NOT VELLUM_MUPDF_ROOT)
     file(MAKE_DIRECTORY "${_mupdf_root}/include")
-elseif(NOT EXISTS "${_mupdf_root}/include/mupdf/fitz.h")
-    message(FATAL_ERROR "VELLUM_MUPDF_ROOT has no MuPDF headers")
 endif()
-if(NOT VELLUM_V8_ROOT)
+set(_mupdf_library "${_mupdf_root}/${_mupdf_archive}")
+set(_mupdf_third_library "${_mupdf_root}/${_mupdf_third_archive}")
+
+if(VELLUM_V8_ROOT)
+    if(NOT EXISTS "${_v8_root}/${_v8_header}")
+        message(FATAL_ERROR "VELLUM_V8_ROOT has no V8 headers")
+    endif()
+else()
+    set(_v8_root "${VELLUM_DEPS_PREFIX}")
     file(MAKE_DIRECTORY "${_v8_root}/include/v8")
-elseif(NOT EXISTS "${_v8_root}/include/v8/v8.h")
-    message(FATAL_ERROR "VELLUM_V8_ROOT has no V8 headers")
 endif()
+set(_v8_library "${_v8_root}/${_v8_archive}")
+
 add_library(vellum_mupdf STATIC IMPORTED GLOBAL)
 set_target_properties(vellum_mupdf PROPERTIES
-    IMPORTED_LOCATION "${_mupdf_root}/lib/libmupdf.a"
-    INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_mupdf_root}/include"
-    INTERFACE_INCLUDE_DIRECTORIES "${_mupdf_root}/include"
-    INTERFACE_LINK_LIBRARIES "${_mupdf_root}/lib/libmupdf-third.a;Threads::Threads;${CMAKE_DL_LIBS};m")
+        IMPORTED_LOCATION "${_mupdf_library}"
+        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_mupdf_root}/include"
+        INTERFACE_INCLUDE_DIRECTORIES "${_mupdf_root}/include"
+        INTERFACE_LINK_LIBRARIES
+        "${_mupdf_third_library};Threads::Threads;${CMAKE_DL_LIBS};m"
+)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(VELLUM_SYSTEM_ICU REQUIRED IMPORTED_TARGET icu-uc>=73 icu-i18n>=73)
 add_library(vellum_v8 STATIC IMPORTED GLOBAL)
 set_target_properties(vellum_v8 PROPERTIES
-    IMPORTED_LOCATION "${_v8_root}/lib/libv8_monolith.a"
-    INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_v8_root}/include/v8"
-    INTERFACE_INCLUDE_DIRECTORIES "${_v8_root}/include/v8"
-    INTERFACE_LINK_LIBRARIES "Threads::Threads;${CMAKE_DL_LIBS};m")
-add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/dependencies-ready.stamp"
-    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/prepare_dependencies.py
-        --prefix ${VELLUM_DEPS_PREFIX} --work ${VELLUM_DEPS_WORK}
-        --jobs ${VELLUM_DEPENDENCY_JOBS}
-        --mupdf-root=${VELLUM_MUPDF_ROOT} --v8-root=${VELLUM_V8_ROOT}
-    COMMAND ${CMAKE_COMMAND} -E touch "${PROJECT_BINARY_DIR}/dependencies-ready.stamp"
-    DEPENDS ${PROJECT_SOURCE_DIR}/scripts/prepare_dependencies.py ${PROJECT_SOURCE_DIR}/docs/dependencies.lock.json
-    BYPRODUCTS "${_mupdf_root}/lib/libmupdf.a" "${_mupdf_root}/lib/libmupdf-third.a"
-               "${_v8_root}/lib/libv8_monolith.a"
-    USES_TERMINAL VERBATIM)
-add_custom_target(vellum_dependencies DEPENDS "${PROJECT_BINARY_DIR}/dependencies-ready.stamp")
+        IMPORTED_LOCATION "${_v8_library}"
+        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_v8_root}/include/v8"
+        INTERFACE_INCLUDE_DIRECTORIES "${_v8_root}/include/v8"
+        INTERFACE_LINK_LIBRARIES "PkgConfig::VELLUM_SYSTEM_ICU;Threads::Threads;${CMAKE_DL_LIBS};m;atomic"
+)
+
+# Explicit external installations are inputs, not generated build outputs.
+set(_dependency_byproducts)
+if(NOT VELLUM_MUPDF_ROOT)
+    list(APPEND _dependency_byproducts
+            "${_mupdf_library}"
+            "${_mupdf_third_library}"
+            "${_mupdf_root}/${_mupdf_fitz_header}"
+            "${_mupdf_root}/${_mupdf_pdf_header}"
+    )
+endif()
+if(NOT VELLUM_V8_ROOT)
+    list(APPEND _dependency_byproducts "${_v8_library}" "${_v8_root}/${_v8_header}")
+endif()
+
+add_custom_target(vellum_dependencies
+        COMMAND ${Python3_EXECUTABLE}
+        "${PROJECT_SOURCE_DIR}/scripts/prepare_dependencies.py"
+        --prefix "${VELLUM_DEPS_PREFIX}"
+        --work "${VELLUM_DEPS_WORK}"
+        --jobs "${VELLUM_DEPENDENCY_JOBS}"
+        "--mupdf-root=${VELLUM_MUPDF_ROOT}"
+        "--v8-root=${VELLUM_V8_ROOT}"
+        BYPRODUCTS ${_dependency_byproducts}
+        USES_TERMINAL
+        VERBATIM
+)
+
 add_dependencies(vellum_mupdf vellum_dependencies)
 add_dependencies(vellum_v8 vellum_dependencies)

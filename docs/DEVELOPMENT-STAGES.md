@@ -5,16 +5,21 @@ stop the user's broader task. Resolve the active HANDOFF first; then select the
 first unfinished prerequisite stage. Recursively break difficult work into concrete
 subtasks. Preserve catalog exclusions and dependencies; never modify source
 catalogs to mark progress. Review every stage under IMPLEMENTATION-REVIEW.md.
+Keep this document focused on remaining work: remove completed requirements as
+their acceptance is established, down to individual sentences or clauses where
+appropriate. Revise or expand the remaining tasks when investigation reveals
+additional work. Preserve partially met requirements and their outstanding
+acceptance conditions; passing a narrow test alone does not complete them.
 
 ## Stage 0 — Build/integration acceptance (first builder task)
 
-Prepare MuPDF/V8 using the supplied builder, compile the real wxWidgets UI and
-static integrations on Slackware and Ubuntu Docker. Fix actual upstream API/build
-mismatches, add generated PDF and wx event tests, and prove each integration target
-runs rather than merely links. Verify dependency reuse/offline mode, interrupted
-preparation, installation, missing/incompatible roots and Release smoke execution.
+Establish remaining platform and configuration acceptance independently. Fix any
+remaining upstream API/build mismatches and extend generated PDF and wx event
+tests to cover outstanding integration paths. Verify interrupted preparation,
+installation, and missing/incompatible roots.
 Reconcile the audit inventory and line/branch coverage against every production
-source path; create fault-injection seams for reachable uncovered OS failures.
+source path. Extend worker coverage beyond the direct protocol tests and create fault-injection
+seams for reachable uncovered OS failures.
 This stage is unfinished until GUI/MuPDF/V8/native-printing behavior is tested with real libs.
 
 ## Stage 1 — Complete viewer workspace and single-owner execution
@@ -118,3 +123,9 @@ failure oracles; run unit/integration/UI tests, applicable sanitizers, coverage 
 Ubuntu Docker; review correctness arguments; record evidence. Only then set status
 complete and add the delivered change to the current CHANGELOG section. A partial
 implementation remains partial, even if its narrow tests pass.
+
+Apply the project-wide testing and coverage requirements in
+PROJECT-ARCHITECTURE.md and the stage verification procedure in
+docs/VERIFICATION-ARCHITECTURE.md to every stage and feature. Do not defer relevant
+coverage gaps in a stage's implemented scope to a later stage as a substitute for
+acceptance.

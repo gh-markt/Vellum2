@@ -102,6 +102,9 @@ void sheet_painter::paint(wxDC &dc, const print_job &job, std::size_t side_index
         dpi > 600) {
         throw std::invalid_argument("invalid print render request");
     }
+    if (job.options.layout == print_layout::poster && job.sides[side_index].placements.empty()) {
+        throw std::invalid_argument("poster side has no placement");
+    }
     require_print_permission(this->document, dpi);
     drawing_context context{dc, job.options, paper, dpi};
     const auto &side = job.sides[side_index];
@@ -123,7 +126,9 @@ void sheet_painter::paint(wxDC &dc, const print_job &job, std::size_t side_index
         dc.SetPen(wxPen(wxColour(120, 120, 120), 1, wxPENSTYLE_DOT));
         dc.DrawRectangle(printable);
     }
-    if (job.options.cut_marks && job.options.layout == print_layout::poster) {
+    const bool blank_poster = job.options.layout == print_layout::poster &&
+                              !side.placements.empty() && side.placements.front().page == 0;
+    if (job.options.cut_marks && job.options.layout == print_layout::poster && !blank_poster) {
         dc.SetPen(*wxBLACK_PEN);
         for (const auto &placement : side.placements) {
             const auto edge = pixel_rectangle(placement.clip, job.options, paper);
@@ -135,7 +140,7 @@ void sheet_painter::paint(wxDC &dc, const print_job &job, std::size_t side_index
             }
         }
     }
-    if (job.options.tile_labels && job.options.layout == print_layout::poster) {
+    if (job.options.tile_labels && job.options.layout == print_layout::poster && !blank_poster) {
         dc.SetTextForeground(*wxBLACK);
         dc.SetFont(wxFontInfo(8));
         dc.DrawText(wxString::Format(wxString::FromUTF8("Page %d — tile %d,%d"),

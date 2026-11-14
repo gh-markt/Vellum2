@@ -80,16 +80,18 @@ bool printer_settings::select_printer(wxWindow *parent) {
     if (copies < 1 || copies > 100) {
         throw std::runtime_error("copies must be between 1 and 100");
     }
-    this->implementation->preferences = {
-        settings.GetOrientation() == wxLANDSCAPE,
-        settings.GetDuplex() == wxDUPLEX_VERTICAL     ? print_duplex::long_edge
-        : settings.GetDuplex() == wxDUPLEX_HORIZONTAL ? print_duplex::short_edge
-                                                      : print_duplex::simplex,
-        copies, accepted.GetCollate(), !settings.GetColour()};
-    this->implementation->data = accepted;
-    this->implementation->data.SetAllPages(true);
-    this->implementation->data.SetNoCopies(1);
-    this->implementation->chosen = true;
+    auto replacement = std::make_unique<impl>(*this->implementation);
+    replacement->preferences = {settings.GetOrientation() == wxLANDSCAPE,
+                                settings.GetDuplex() == wxDUPLEX_VERTICAL ? print_duplex::long_edge
+                                : settings.GetDuplex() == wxDUPLEX_HORIZONTAL
+                                    ? print_duplex::short_edge
+                                    : print_duplex::simplex,
+                                copies, accepted.GetCollate(), !settings.GetColour()};
+    replacement->data = accepted;
+    replacement->data.SetAllPages(true);
+    replacement->data.SetNoCopies(1);
+    replacement->chosen = true;
+    this->implementation.swap(replacement);
     return true;
 }
 printer_preferences printer_settings::preferences() const {
@@ -127,7 +129,8 @@ print_options printer_settings::measure(const print_options &requested) const {
     const auto paper = dc.GetPaperRect();
     const auto ppi = dc.GetPPI();
     const auto printable = dc.GetSize();
-    if (ppi.x <= 0 || ppi.y <= 0 || paper.width <= 0 || paper.height <= 0) {
+    if (ppi.x <= 0 || ppi.y <= 0 || paper.width <= 0 || paper.height <= 0 || printable.x <= 0 ||
+        printable.y <= 0) {
         throw std::runtime_error("printer did not provide usable paper dimensions");
     }
     auto options = requested;

@@ -75,6 +75,12 @@ Do not proceed on the assumption that the existing test suite correctly represen
 
 ## Phase 2 — Construct the audit coverage inventory
 
+Reconcile docs/SUBSYSTEM-INVENTORY.md and the verification requirements in
+docs/VERIFICATION-ARCHITECTURE.md against the complete current implementation,
+interfaces and workflows. Review project, subsystem and critical component coverage
+distribution, raw compiler-generated branch edges and missing instrumentation; do
+not infer decision coverage or semantic correctness from aggregate percentages.
+
 Inventory the actual production source tree, public and internal interfaces, supported user operations, persistent state, and architectural subsystems.
 
 Map the inventory against the specification and invariants established in Phase 1.

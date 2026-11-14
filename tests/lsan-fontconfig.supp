@@ -1,0 +1,4 @@
+# Fontconfig retains process-global caches after GTK shutdown. This suppression
+# is limited to allocations with a fontconfig frame; Vellum's allocations remain
+# visible to LeakSanitizer.
+leak:libfontconfig.so

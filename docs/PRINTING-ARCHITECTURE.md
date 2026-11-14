@@ -35,6 +35,9 @@ rebuild. Invalid options keep submission disabled. Preview side navigation and
 PNG export use the same sheet painter as native output. Print output uses bounded
 visible-region raster tiles at physical output DPI and device transforms rather
 than allocating or upsampling full pages. The plan is capped at 10,000 sides.
+PNG export encodes before atomically publishing the image: failures before rename
+preserve an existing destination, while a failure after rename can leave the new
+image visible and must still be reported.
 Native properties feed paper bounds, orientation, duplex, copies/collation and
 color back into the custom controls and preview. Backend-specific tray/finishing
 semantics still require platform acceptance. Manual duplex explicitly submits
@@ -51,10 +54,10 @@ real wx PostScript file device; physical printers/spoolers remain unverified her
 | Capability | Required behavior |
 | --- | --- |
 | Selection | All pages, current page, selected pages and selected area/current view where supported by catalog; typed disjoint ranges such as `1-3, 7-10 12-19`; meaningful errors |
-| Parity and order | All, odd-only or even-only document pages within the selected ranges; reverse order; copies and collation with an explicit order of operations |
+| Parity and order | All, odd-only or even-only positions within the selected sequence; reverse order; copies and collation with an explicit order of operations |
 | Size | Actual size, fit, shrink oversized pages, custom percentage; auto-rotate and center; orientation; page-box selection and paper selection by PDF page size where supported |
 | Multiple per sheet | Configurable grid, page order, orientation, margins/gutters and borders; single application of layout with driver N-up disabled |
-| Booklet | Imposed front/back sheet pairs, blank padding, left/right binding, full/front-only/back-only printing, automatic duplex and explicit manual-duplex workflow; fold/order preview |
+| Booklet | Imposed front/back sheet pairs, blank padding, left/right binding, full/front-only/back-only printing and short-edge duplex; fold/order preview |
 | Poster/tiling | Scale across sheets, overlap, cut marks, tile labels and page/tile selection; correct clipping and placement at printable margins; no missing strips at tile boundaries |
 | Device | Printer selection/properties, paper/media/tray/size, printable bounds, resolution, color/monochrome/grayscale, supported simplex/duplex binding modes, copies and collation |
 | Content | Document, comments/markups, form-only output and applicable combinations; comment summaries; annotation/widget print flags and optional-content print intent |
@@ -63,20 +66,41 @@ real wx PostScript file device; physical printers/spoolers remain unverified her
 | Preview | Automatically refresh the actual imposed sheet/side preview after relevant setting changes; show sheet/side/page mappings, printable bounds, scale, orientation, tiling overlap and blank padding |
 | Production | Included ICC/color-management, separations, overprint/ink warnings, rendering intent, spot-color mapping, transparency, marks/bleed/trim and other print-production catalog requirements; dedicated adapters/dependencies as justified |
 
-The portable selector currently uses one-based physical document page numbers,
-sorts ascending and removes duplicates; reverse/copies are subsequent planning
-operations. Odd/even refers to original document page numbers, never selected-list
-indices or imposed sheet numbers. Whitespace and commas separate ranges; whitespace
-around a hyphen is accepted. Reject zero, negatives, overflow, descending ranges,
-out-of-document pages, missing endpoints and empty comma-separated terms. An empty
+The portable selector uses one-based physical document page numbers in the typed
+order, including repetitions; reverse/copies are subsequent planning operations.
+Two consecutive commas insert one blank page, three insert two, and so on; whitespace
+between commas does not change this. Blanks can appear at the beginning or end of
+the expression. A single leading or trailing comma is invalid. Odd/even applies to
+one-based positions in the complete selected sequence, including explicit blanks,
+before reverse, copies or imposition; document page numbers do not determine parity.
+Whitespace and commas separate ranges; whitespace around a hyphen is accepted.
+Reject numeric zero, negatives, overflow, descending ranges, out-of-document pages
+and missing endpoints. An empty
 filtered result is valid selection output but must disable job submission with an
 explanation. Page-label selection requires an explicit later mapping/UI distinction;
 never silently interpret Roman labels as physical indices.
 
-Bootstrap parser limits are 1,000,000 document pages and 65,536 expression bytes;
-report limits honestly. Difference-array interval marking bounds time to expression
-length plus page count even for many overlapping ranges; no range-by-page quadratic
-loop. Limits are resource policy, not feature-parity claims.
+Booklet mode forces short-edge duplex and all selected pages, disabling the duplex
+and parity controls until another layout is selected. Once a printer is selected,
+paper selection belongs to its properties; a nominal paper choice is available only
+for preview before selecting a printer. Native printer measurements govern output.
+Odd-only or even-only selection forces one-sided printing and disables the duplex
+control. Selecting all pages or a custom range clears the parity filter and makes
+duplex available again, except while booklet mode requires short-edge duplex.
+N-up also fixes the parity filter to all pages and disables that control; duplex
+remains available for N-up. Both layouts allow custom ranges; all pages here means
+all entries in the chosen range, including explicit blanks.
+The custom range starts empty and is cleared when switching to any non-custom
+page selection; returning to custom selection requires a new range.
+Media choices and defaults are output-device specific: PDF output may offer both
+document-page sizing and fixed sheet sizes, including for N-up and tiling, while a
+physical device may support only certain media. Do not claim per-page PDF-sized
+output until the backend can actually produce it.
+
+Bootstrap parser limits are 1,000,000 document pages, 65,536 expression bytes and
+1,000,000 selected entries, including repeats and blanks. The output limit bounds
+expansion of repeated or overlapping ranges; reject excess rather than truncating.
+Limits are resource policy, not feature-parity claims.
 
 ## One plan for preview and print
 
@@ -129,7 +153,8 @@ remain immutable and must be stated rather than implemented as false promises.
 This document supplements the catalogs and does not edit them.
 
 Use independent mathematical oracles for page sets, physical transforms and sheet
-ordering. Cover odd/even after disjoint-range selection, overlap/deduplication,
+ordering. Cover odd/even after disjoint-range selection, repeated and overlapping pages,
+consecutive-comma blanks, their typed positions and layout interactions,
 invalid syntax, huge repeated ranges and bounded memory/time. Booklet tests must
 verify physical folding/order for odd and even document sizes, padded blanks,
 binding edges and duplex flips. Tiling tests must establish coverage without gaps,

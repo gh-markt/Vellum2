@@ -1,5 +1,6 @@
 work
 build*
+cmake-build*
 .deps
 .git
 __pycache__

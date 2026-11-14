@@ -9,6 +9,7 @@
 #include <wx/spinctrl.h>
 #include <wx/wx.h>
 namespace vellum {
+class viewer_canvas;
 class main_frame : public wxFrame {
   public:
     main_frame();
@@ -21,6 +22,8 @@ class main_frame : public wxFrame {
     int current_page() const;
 
   private:
+    friend class viewer_canvas;
+    wxDECLARE_EVENT_TABLE();
     enum { unlock_id = wxID_HIGHEST + 99 };
     enum {
         open_id = wxID_HIGHEST + 1,
@@ -35,7 +38,9 @@ class main_frame : public wxFrame {
         zoom_out_id,
         actual_id,
         zoom_control_id,
-        page_control_id
+        page_control_id,
+        autosave_timer_id,
+        zoom_timer_id
     };
     enum class document_action { edit, print, save, save_as };
     struct authorization {
@@ -46,11 +51,28 @@ class main_frame : public wxFrame {
     void commit_authorization(const authorization &authorization);
     void build_menus();
     void build_toolbar();
-    void bind_actions();
-    void bind_view_actions();
+    void on_open(wxCommandEvent &event);
+    void on_recover(wxCommandEvent &event);
+    void on_save(wxCommandEvent &event);
+    void on_save_as(wxCommandEvent &event);
+    void on_editor(wxCommandEvent &event);
+    void on_previous(wxCommandEvent &event);
+    void on_next(wxCommandEvent &event);
+    void on_print(wxCommandEvent &event);
+    void on_exit(wxCommandEvent &event);
+    void on_unlock(wxCommandEvent &event);
+    void on_fit_page(wxCommandEvent &event);
+    void on_fit_width(wxCommandEvent &event);
+    void on_fit_height(wxCommandEvent &event);
+    void on_actual_size(wxCommandEvent &event);
+    void on_zoom_in(wxCommandEvent &event);
+    void on_zoom_out(wxCommandEvent &event);
+    void on_zoom_control(wxCommandEvent &event);
+    void on_page_control(wxSpinEvent &event);
     void update_actions();
     void unlock_permissions();
     void apply_zoom_control();
+    void apply_zoom_menu(zoom_mode mode, double percentage = 100);
     void print_document();
     void open_document();
     void recover_document();

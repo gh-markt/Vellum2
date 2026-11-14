@@ -282,9 +282,12 @@ malformed inputs, persistence, crash points and recovery as applicable. Test the
 production operation, not a duplicate algorithm. The autosave test hook must call
 the same operation as the production timer, with only the clock/trigger controlled.
 
-Measure line and branch coverage in CI. Every uncovered reachable path requires a
-specific tracked test task; do not call a feature complete while relevant paths
-remain untested. Do not misrepresent a percentage as proof. Document genuinely
+Measure line and branch coverage in CI. Track every reachable path lacking adequate
+evidence with a specific verification task; do not call a feature complete while
+relevant paths lack adequate verification. A sound general proof of the relevant
+property can replace redundant exhaustive enumeration within its established scope,
+but retain appropriate tests of integration, regression, assumptions and production
+correspondence. Do not misrepresent a percentage as proof. Document genuinely
 unreachable defensive paths with reasoning. No blanket third-party coverage duty;
 test Vellum's integration boundaries. Never weaken this requirement to meet a stage.
 

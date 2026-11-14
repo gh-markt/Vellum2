@@ -8,6 +8,27 @@
 #include <wx/statbmp.h>
 #include <wx/statusbr.h>
 #include <wx/textdlg.h>
+
+// Set up a dirty revision until live Editor mutations are implemented; this
+// exercises the actual frame-owned autosave callbacks and recovery artifact.
+template <class Tag, typename Tag::type member> struct frame_member_access {
+    friend typename Tag::type frame_member(Tag) { return member; }
+};
+struct frame_state_member {
+    using type = vellum::document_state vellum::main_frame::*;
+    friend type frame_member(frame_state_member);
+};
+struct frame_autosave_member {
+    using type = std::unique_ptr<vellum::autosave_controller> vellum::main_frame::*;
+    friend type frame_member(frame_autosave_member);
+};
+struct frame_recovery_member {
+    using type = std::filesystem::path vellum::main_frame::*;
+    friend type frame_member(frame_recovery_member);
+};
+template struct frame_member_access<frame_state_member, &vellum::main_frame::state>;
+template struct frame_member_access<frame_autosave_member, &vellum::main_frame::autosave>;
+template struct frame_member_access<frame_recovery_member, &vellum::main_frame::recovery_path>;
 class ui_test_app : public wxApp {
   public:
     bool OnInit() override {
@@ -55,7 +76,7 @@ class password_hook : public wxModalDialogHook {
             input->SetValue(this->password);
             return this->response;
         }
-        if (dialog->GetTitle() == "Authorization failed") {
+        if (dialog->GetTitle() == "Authorization failed" || dialog->GetTitle() == "Vellum") {
             ++this->alert_count;
             return wxID_OK;
         }
@@ -80,10 +101,166 @@ class password_hook : public wxModalDialogHook {
     int print_count = 0;
     bool unexpected_dialog = false;
 };
+class error_hook : public wxModalDialogHook {
+  public:
+    error_hook() { this->Register(); }
+    int count = 0;
+
+  protected:
+    int Enter(wxDialog *dialog) override {
+        if (dialog->GetTitle() == "Vellum") {
+            ++this->count;
+        }
+        return wxID_OK;
+    }
+};
+class empty_file_hook : public wxModalDialogHook {
+  public:
+    empty_file_hook() { Register(); }
+    int files = 0;
+    int errors = 0;
+    bool unexpected = false;
+
+  protected:
+    int Enter(wxDialog *dialog) override {
+        if (dynamic_cast<wxFileDialog *>(dialog)) {
+            ++files;
+            return wxID_OK;
+        }
+        if (dialog->GetTitle() == "Vellum") {
+            ++errors;
+            return wxID_OK;
+        }
+        unexpected = true;
+        return wxID_CANCEL;
+    }
+};
 void viewer_tests(vellum::main_frame &frame, const std::filesystem::path &fixture) {
+    require(!frame.GetMenuBar()->IsEnabled(wxID_PRINT) && !frame.GetMenuBar()->IsEnabled(wxID_SAVE),
+            "document actions must be disabled before opening a document");
+    auto *empty_canvas = dynamic_cast<wxScrolledWindow *>(frame.FindWindowByName("viewer-canvas"));
+    require(empty_canvas != nullptr, "viewport missing before opening a document");
+    wxMouseEvent empty_wheel(wxEVT_MOUSEWHEEL);
+    empty_wheel.m_wheelRotation = 120;
+    empty_wheel.m_wheelDelta = 120;
+    empty_canvas->GetEventHandler()->ProcessEvent(empty_wheel);
+    require(!frame.GetMenuBar()->IsEnabled(wxID_SAVE), "wheel enabled a document action");
+    for (const auto type :
+         {wxEVT_SCROLLWIN_TOP, wxEVT_SCROLLWIN_BOTTOM, wxEVT_SCROLLWIN_LINEUP,
+          wxEVT_SCROLLWIN_LINEDOWN, wxEVT_SCROLLWIN_PAGEUP, wxEVT_SCROLLWIN_PAGEDOWN,
+          wxEVT_SCROLLWIN_THUMBTRACK, wxEVT_SCROLLWIN_THUMBRELEASE}) {
+        wxScrollWinEvent empty_scroll(type, 0, wxVERTICAL);
+        empty_canvas->GetEventHandler()->ProcessEvent(empty_scroll);
+        require(!frame.GetMenuBar()->IsEnabled(wxID_SAVE) && frame.current_page() == 1,
+                "scroll without a document changed the session");
+    }
+    {
+        password_hook hook("", wxID_CANCEL);
+        for (const auto *label :
+             {"Save", "Save As...", "Print...", "Enable editor mode for this document",
+              "Unlock PDF permissions..."}) {
+            select_menu(frame, 0, label);
+        }
+        select_menu(frame, 1, "Previous page");
+        select_menu(frame, 1, "Next page");
+        select_menu(frame, 2, "Fit page");
+        select_menu(frame, 2, "Fit width");
+        select_menu(frame, 2, "Fit height");
+        select_menu(frame, 2, "100%");
+        frame.go_to_page(1);
+        frame.set_zoom(vellum::zoom_mode::percentage, 125);
+        require(hook.prompts() == 0 && hook.files() == 0 && hook.prints() == 0 &&
+                    !hook.unexpected(),
+                "document commands without a document must not start an operation");
+    }
     frame.open_path(fixture);
     events();
     require(frame.GetStatusBar()->GetStatusText().Contains("Page 1 / 2"), "first page");
+    const auto open_title = frame.GetTitle();
+    {
+        password_hook hook("", wxID_CANCEL);
+        select_menu(frame, 0, "Open PDF...");
+        select_menu(frame, 0, "Recover snapshot...");
+        require(hook.files() == 2 && !hook.unexpected() && frame.GetTitle() == open_title &&
+                    frame.current_page() == 1,
+                "cancelled file dialogs must preserve the open session");
+    }
+    {
+        empty_file_hook hook;
+        for (const auto *label : {"Open PDF...", "Recover snapshot...", "Save As..."}) {
+            select_menu(frame, 0, label);
+        }
+        require(hook.files == 3 && hook.errors == 3 && !hook.unexpected &&
+                    frame.GetTitle() == open_title && frame.current_page() == 1,
+                "empty paths from native dialogs must be rejected without replacing the document");
+    }
+    auto *zoom = dynamic_cast<wxComboBox *>(frame.FindWindowByName("viewer-zoom"));
+    require(zoom != nullptr, "zoom control missing");
+    const auto enter_zoom = [&](const wxString &text) {
+        zoom->SetValue(text);
+        wxCommandEvent event(wxEVT_TEXT_ENTER, zoom->GetId());
+        require(frame.GetEventHandler()->ProcessEvent(event), "zoom entry not handled");
+    };
+    for (const auto &[text, policy] :
+         {std::pair{wxString(" fit WIDTH "), vellum::zoom_mode::fit_width},
+          std::pair{wxString("Fit HEIGHT"), vellum::zoom_mode::fit_height},
+          std::pair{wxString("FIT PAGE"), vellum::zoom_mode::fit_page}}) {
+        enter_zoom(text);
+        require(frame.zoom_policy() == policy, "fit zoom entry was not applied");
+    }
+    for (const auto &[label, policy] :
+         {std::pair{wxString("Fit width"), vellum::zoom_mode::fit_width},
+          std::pair{wxString("Fit height"), vellum::zoom_mode::fit_height},
+          std::pair{wxString("Fit page"), vellum::zoom_mode::fit_page}}) {
+        select_menu(frame, 2, label);
+        require(frame.zoom_policy() == policy && frame.current_page() == 1 &&
+                    frame.zoom_scale() > 0 &&
+                    frame.GetStatusBar()->GetStatusText().Contains("Page 1 / 2"),
+                "fit menu did not preserve the page and apply the requested view");
+    }
+    enter_zoom(" 125% ");
+    require(frame.zoom_policy() == vellum::zoom_mode::percentage &&
+                std::abs(frame.zoom_scale() - 1.25) < .0001,
+            "percentage zoom entry was not applied");
+    for (const auto *invalid : {"not a number", "0%", "801%"}) {
+        error_hook hook;
+        enter_zoom(invalid);
+        require(hook.count == 1 && frame.zoom_policy() == vellum::zoom_mode::percentage &&
+                    std::abs(frame.zoom_scale() - 1.25) < .0001,
+                "invalid zoom must report an error without changing the view");
+    }
+    select_menu(frame, 2, "100%");
+    require(std::abs(frame.zoom_scale() - 1.0) < .0001, "actual-size menu");
+    select_menu(frame, 2, "Zoom in");
+    require(std::abs(frame.zoom_scale() - 1.25) < .0001, "zoom-in menu");
+    select_menu(frame, 2, "Zoom out");
+    require(std::abs(frame.zoom_scale() - 1.0) < .0001, "zoom-out menu");
+    enter_zoom("800%");
+    select_menu(frame, 2, "Zoom in");
+    require(std::abs(frame.zoom_scale() - 8.0) < .0001, "zoom-in upper limit");
+    enter_zoom("1%");
+    select_menu(frame, 2, "Zoom out");
+    require(std::abs(frame.zoom_scale() - .01) < .0001, "zoom-out lower limit");
+    zoom->SetValue("Fit width");
+    wxCommandEvent choose_fit(wxEVT_COMBOBOX, zoom->GetId());
+    require(frame.GetEventHandler()->ProcessEvent(choose_fit) &&
+                frame.zoom_policy() == vellum::zoom_mode::fit_width,
+            "zoom selection did not apply fit width");
+    auto *page = dynamic_cast<wxSpinCtrl *>(frame.FindWindowByName("viewer-page"));
+    require(page != nullptr, "page control missing");
+    page->SetValue(2);
+    wxSpinEvent choose_page(wxEVT_SPINCTRL, page->GetId());
+    require(frame.GetEventHandler()->ProcessEvent(choose_page) && frame.current_page() == 2,
+            "page control did not navigate");
+    select_menu(frame, 1, "Next page");
+    require(frame.current_page() == 2, "next-page command advanced beyond the last page");
+    page->SetValue(1);
+    require(frame.GetEventHandler()->ProcessEvent(choose_page) && frame.current_page() == 1,
+            "page control did not navigate back");
+    for (const int invalid : {0, -1, 3}) {
+        frame.go_to_page(invalid);
+        require(frame.current_page() == 1, "invalid page changed the current page");
+    }
     select_menu(frame, 1, "Previous page");
     require(frame.current_page() == 1, "previous boundary");
     frame.set_zoom(vellum::zoom_mode::percentage, 125);
@@ -96,6 +273,32 @@ void viewer_tests(vellum::main_frame &frame, const std::filesystem::path &fixtur
     auto *canvas = dynamic_cast<wxScrolledWindow *>(frame.FindWindowByName("viewer-canvas"));
     auto *bitmap = dynamic_cast<wxStaticBitmap *>(frame.FindWindowByName("viewer-bitmap"));
     require(canvas && bitmap, "viewport controls missing");
+    const auto viewport_size = canvas->GetSize();
+    canvas->SetSize(wxSize(16, 16));
+    frame.go_to_page(2);
+    require(frame.current_page() == 2, "tiny viewport lost the selected page");
+    canvas->SetSize(viewport_size);
+    frame.go_to_page(2);
+    require(bitmap->IsShown() && frame.GetStatusBar()->GetStatusText().Contains("Page 2 / 2"),
+            "viewer did not render the selected page after the viewport was restored");
+    {
+        error_hook hook;
+        for (const int size : {32, 33, 34, 40, 48}) {
+            for (const auto mode : {vellum::zoom_mode::fit_width, vellum::zoom_mode::fit_height}) {
+                canvas->SetClientSize(wxSize(size, size));
+                frame.set_zoom(mode);
+                frame.go_to_page(2);
+                require(frame.current_page() == 2 && hook.count == 0,
+                        "small viewport changed the document or reported a spurious failure");
+            }
+        }
+        canvas->SetSize(viewport_size);
+        frame.set_zoom(vellum::zoom_mode::percentage, 800);
+        frame.go_to_page(2);
+        require(bitmap->IsShown() && hook.count == 0,
+                "viewer did not recover after repeated small viewport changes");
+    }
+    frame.go_to_page(1);
     require(bitmap->GetBitmap().GetWidth() <= canvas->GetClientSize().x + 2,
             "viewer allocated the entire zoomed page instead of visible region");
     canvas->Scroll(20, 15);
@@ -104,6 +307,15 @@ void viewer_tests(vellum::main_frame &frame, const std::filesystem::path &fixtur
     events();
     require(bitmap->IsShown() && bitmap->GetPosition().x >= -2,
             "scroll did not refresh visible region position");
+    for (const int rotation : {-120, 120}) {
+        wxMouseEvent wheel(wxEVT_MOUSEWHEEL);
+        wheel.m_wheelRotation = rotation;
+        wheel.m_wheelDelta = 120;
+        canvas->GetEventHandler()->ProcessEvent(wheel);
+        events();
+        require(bitmap->IsShown() && frame.current_page() == 1,
+                "mouse wheel lost the visible document");
+    }
     canvas->Scroll(0, 0);
     frame.set_zoom(vellum::zoom_mode::fit_width);
     events();
@@ -116,6 +328,8 @@ void viewer_tests(vellum::main_frame &frame, const std::filesystem::path &fixtur
     events();
     require(frame.current_page() == 2 && frame.zoom_scale() < first_page_scale * .75,
             "fit width did not track mixed page width");
+    select_menu(frame, 1, "Next page");
+    require(frame.current_page() == 2, "next page crossed document boundary");
     frame.set_zoom(vellum::zoom_mode::fit_height);
     events();
     const auto short_page_scale = frame.zoom_scale();
@@ -127,6 +341,27 @@ void viewer_tests(vellum::main_frame &frame, const std::filesystem::path &fixtur
     require(frame.zoom_policy() == vellum::zoom_mode::fit_page, "fit-page menu");
     select_menu(frame, 0, "Enable editor mode for this document");
     require(frame.GetStatusBar()->GetStatusText().Contains("Editor"), "editor transition");
+    {
+        auto &state = frame.*frame_member(frame_state_member{});
+        auto &autosave = frame.*frame_member(frame_autosave_member{});
+        const auto recovery = frame.*frame_member(frame_recovery_member{});
+        const auto original = vellum::read_file(fixture);
+        require(autosave && !recovery.empty() && !std::filesystem::exists(recovery),
+                "new Editor session must have an unused recovery target");
+        state.changed();
+        require(state.needs_autosave() &&
+                    autosave->trigger_now(vellum::autosave_controller::clock::now()),
+                "dirty Editor session did not publish recovery");
+        require(!state.needs_autosave() && vellum::read_file(recovery) == original &&
+                    vellum::read_file(fixture) == original && frame.current_page() == 1,
+                "frame recovery changed the original, document state or captured bytes");
+        vellum::pdf_document recovered(recovery);
+        require(recovered.pages() == 2 &&
+                    !autosave->trigger_now(vellum::autosave_controller::clock::now()),
+                "recovery is invalid or an unchanged session published again");
+        std::filesystem::remove(recovery);
+        std::filesystem::remove(recovery.parent_path());
+    }
     const int editor =
         frame.GetMenuBar()->GetMenu(0)->FindItem("Enable editor mode for this document");
     require(!frame.GetMenuBar()->IsEnabled(editor),
@@ -137,6 +372,28 @@ void viewer_tests(vellum::main_frame &frame, const std::filesystem::path &fixtur
             "reopen resets document mode");
 }
 void permission_tests(vellum::main_frame &frame, const std::filesystem::path &root) {
+    frame.open_path(root / "restricted.pdf");
+    events();
+    {
+        password_hook hook("", wxID_CANCEL);
+        select_menu(frame, 0, "Unlock PDF permissions...");
+        require(hook.prompts() == 1 && hook.alerts() == 0 && !hook.unexpected(),
+                "cancelled unlock must leave the session unchanged");
+    }
+    {
+        password_hook hook("incorrect", wxID_OK);
+        select_menu(frame, 0, "Unlock PDF permissions...");
+        require(hook.prompts() == 1 && hook.alerts() == 1 && !hook.unexpected() &&
+                    frame.GetStatusBar()->GetStatusText().Contains("Reader"),
+                "incorrect unlock must report an error and preserve Reader mode");
+    }
+    {
+        password_hook hook("test-owner", wxID_OK);
+        select_menu(frame, 0, "Unlock PDF permissions...");
+        require(hook.prompts() == 1 && hook.alerts() == 0 && !hook.unexpected() &&
+                    frame.GetStatusBar()->GetStatusText().Contains("authenticated"),
+                "owner unlock did not update the session");
+    }
     frame.open_path(root / "restricted.pdf");
     events();
     const int editor =
@@ -280,6 +537,17 @@ int main(int argc, char **argv) {
         events();
         viewer_tests(*frame, fixture);
         permission_tests(*frame, security);
+        int close_requests = 0;
+        frame->Bind(wxEVT_CLOSE_WINDOW, [&](wxCloseEvent &event) {
+            ++close_requests;
+            event.Veto();
+        });
+        const auto prior_title = frame->GetTitle();
+        const auto prior_page = frame->current_page();
+        wxCommandEvent exit_command(wxEVT_MENU, wxID_EXIT);
+        require(frame->GetEventHandler()->ProcessEvent(exit_command) && close_requests == 1 &&
+                    frame->GetTitle() == prior_title && frame->current_page() == prior_page,
+                "exit menu did not request a close or preserve a vetoed session");
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';
         result = 1;

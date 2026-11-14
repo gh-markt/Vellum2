@@ -23,6 +23,8 @@ class pdf_document::impl {
         if (this->context == nullptr) {
             throw std::runtime_error("MuPDF context allocation failed");
         }
+        bool password_failure = false;
+        fz_var(password_failure);
         fz_try(this->context) {
             fz_register_document_handlers(this->context);
             this->stream = fz_open_memory(
@@ -31,10 +33,13 @@ class pdf_document::impl {
             this->document =
                 fz_open_document_with_stream(this->context, "application/pdf", this->stream);
             auto *pdf = pdf_specifics(this->context, this->document);
+            if (pdf == nullptr) {
+                fz_throw(this->context, FZ_ERROR_GENERIC, "opened document is not a PDF");
+            }
             const int authentication =
                 pdf_authenticate_password(this->context, pdf, this->open_password.c_str());
             if (authentication == 0) {
-                this->password_failure = true;
+                password_failure = true;
                 fz_throw(this->context, FZ_ERROR_GENERIC, "PDF requires a valid password");
             }
             this->owner_authorized = (authentication & 4) != 0;
@@ -52,7 +57,7 @@ class pdf_document::impl {
         fz_catch(this->context) {
             consume_pdf_error(this->context);
             this->release();
-            if (this->password_failure) {
+            if (password_failure) {
                 throw pdf_password_error("PDF requires a valid password");
             }
             throw std::runtime_error("cannot open PDF (invalid or empty)");
@@ -87,7 +92,6 @@ class pdf_document::impl {
     std::string bytes;
     std::string open_password;
     bool owner_authorized = false;
-    bool password_failure = false;
     fz_context *context = nullptr;
     fz_stream *stream = nullptr;
     fz_document *document = nullptr;
@@ -311,7 +315,7 @@ bool pdf_document::authenticate_owner(std::string_view password) {
     if (!this->owner_password_valid(password)) {
         return false;
     }
-    const std::string text(password);
+    std::string text(password);
     auto *context = this->implementation->context;
     int authenticated = 0;
     fz_var(authenticated);
@@ -326,8 +330,8 @@ bool pdf_document::authenticate_owner(std::string_view password) {
     if ((authenticated & 4) == 0) {
         return false;
     }
+    this->implementation->open_password.swap(text);
     this->implementation->owner_authorized = true;
-    this->implementation->open_password = text;
     return true;
 }
 void pdf_document::validate_recovery_snapshot(const std::string &bytes) const {
@@ -371,9 +375,6 @@ std::string pdf_document::snapshot() const {
     return this->implementation->bytes;
 }
 void pdf_document::save_copy(const std::filesystem::path &target) const {
-    if (!this->may_save_as()) {
-        throw std::runtime_error("PDF permissions do not allow copying");
-    }
     std::error_code error;
     if (std::filesystem::equivalent(target, this->source, error) ||
         std::filesystem::weakly_canonical(target) ==

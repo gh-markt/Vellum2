@@ -1,4 +1,8 @@
 #include "vellum/script_runtime.hh"
 int main() {
-    return vellum::run_v8_worker();
+    try {
+        return vellum::run_v8_worker();
+    } catch (...) {
+        return 2;
+    }
 }

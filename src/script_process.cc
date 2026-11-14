@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <system_error>
 #include <unistd.h>
 extern char **environ;
 namespace vellum {
@@ -26,10 +27,16 @@ class descriptor {
             throw std::runtime_error("IPC descriptor creation failed");
         }
     }
-    ~descriptor() { ::close(this->fd); }
+    ~descriptor() { this->close(); }
     descriptor(const descriptor &) = delete;
     descriptor &operator=(const descriptor &) = delete;
     int get() const { return this->fd; }
+    void close() {
+        if (this->fd >= 0) {
+            ::close(this->fd);
+            this->fd = -1;
+        }
+    }
 
   private:
     int fd;
@@ -59,6 +66,10 @@ class child_process {
         if (::posix_spawn_file_actions_init(&actions) != 0) {
             throw std::runtime_error("spawn init");
         }
+        struct actions_cleanup {
+            posix_spawn_file_actions_t *value;
+            ~actions_cleanup() { ::posix_spawn_file_actions_destroy(this->value); }
+        } cleanup{&actions};
         const int first = ::posix_spawn_file_actions_adddup2(&actions, high_socket.get(), 3);
         const int second = ::posix_spawn_file_actions_adddup2(&actions, high_memory.get(), 4);
         std::string path = executable.string();
@@ -67,7 +78,6 @@ class child_process {
                            : second != 0 ? second
                                          : ::posix_spawn(&this->pid, path.c_str(), &actions,
                                                          nullptr, arguments, environ);
-        ::posix_spawn_file_actions_destroy(&actions);
         if (status != 0) {
             throw std::runtime_error("cannot start JavaScript worker");
         }
@@ -123,7 +133,11 @@ void wait_for_reply(int socket, std::chrono::milliseconds timeout) {
         if (ready < 0 && errno == EINTR) {
             continue;
         }
-        if (ready <= 0) {
+        if (ready < 0) {
+            throw std::system_error(errno, std::generic_category(),
+                                    "JavaScript worker poll failed");
+        }
+        if (ready == 0) {
             throw std::runtime_error("JavaScript worker timed out");
         }
         if ((event.revents & POLLIN) == 0) {
@@ -144,7 +158,7 @@ script_result run_script_process(const std::filesystem::path &worker, std::strin
         throw std::runtime_error("IPC socketpair failed");
     }
     const descriptor parent(sockets[0]);
-    const descriptor child(sockets[1]);
+    descriptor child(sockets[1]);
     const descriptor shared(::memfd_create("vellum-script", MFD_CLOEXEC | MFD_ALLOW_SEALING));
     if (::ftruncate(shared.get(), capacity) != 0 ||
         ::fcntl(shared.get(), F_ADD_SEALS, F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL) < 0) {
@@ -153,6 +167,7 @@ script_result run_script_process(const std::filesystem::path &worker, std::strin
     const mapping memory(shared.get());
     std::memcpy(memory.data(), source.data(), source.size());
     const child_process process(worker, child.get(), shared.get());
+    child.close();
     send_packet(parent.get(), {magic, 1, static_cast<std::uint32_t>(source.size()), 0});
     wait_for_reply(parent.get(), timeout);
     const auto response = receive_packet(parent.get());

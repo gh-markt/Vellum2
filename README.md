@@ -15,7 +15,7 @@ parity remain governed development work, not completed features.
 ```sh
 cmake -S . -B work/build -DCMAKE_BUILD_TYPE=Debug
 cmake --build work/build -j2
-ctest --test-dir work/build --output-on-failure
+ctest --test-dir work/build -j "$(nproc)" --output-on-failure
 ./work/build/vellum
 ```
 
