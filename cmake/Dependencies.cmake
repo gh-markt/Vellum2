@@ -64,6 +64,13 @@ if(NOT VELLUM_MUPDF_ROOT)
 endif()
 if(NOT VELLUM_V8_ROOT)
     list(APPEND _dependency_byproducts "${_v8_library}" "${_v8_root}/${_v8_header}")
+    if("${VELLUM_DEPS_WORK}" MATCHES ";")
+        message(FATAL_ERROR "VELLUM_DEPS_WORK cannot contain semicolons")
+    endif()
+    # V8's GN output is outside the CMake build tree. A user-requested clean
+    # must remove this managed configuration too, so the next build recompiles it.
+    set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES
+            "${VELLUM_DEPS_WORK}/v8-tree/v8/out/vellum")
 endif()
 
 add_custom_target(vellum_dependencies

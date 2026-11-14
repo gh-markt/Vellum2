@@ -6,6 +6,10 @@ Do not claim whole catalog features from partial infrastructure.
 
 ## 0.34 — Reboot bootstrap
 
+- Clean the managed V8 GN output with the CMake build so the next build
+  recompiles V8, without deleting the source checkout or external installations.
+- Resume V8 dependency synchronization after a clean without discarding checkout
+  changes or requiring manual patch removal.
 - Isolate headless GUI tests from desktop session services and portal mounts.
 - Size V8 and MuPDF build parallelism from available memory and CPU/container
   limits by default, retaining an explicit job-count override.

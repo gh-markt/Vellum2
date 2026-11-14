@@ -3,6 +3,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -135,6 +136,9 @@ class DependencyRepairTests(unittest.TestCase):
             path = source / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(name)
+        output.mkdir()
+        (output / "LICENSE").write_text("old read-only license")
+        (output / "LICENSE").chmod(0o444)
         builder.copy_licenses(source, output)
         self.assertEqual((output / "LICENSE").read_text(), "LICENSE")
         self.assertEqual((output / "nested/COPYING").read_text(), "nested/COPYING")
@@ -142,9 +146,25 @@ class DependencyRepairTests(unittest.TestCase):
         self.assertFalse((output / ".git/LICENSE").exists())
         self.assertFalse((output / "nested/code.cc").exists())
 
+    def test_license_copy_failure_preserves_old_file_and_cleans_temporary(self):
+        source = self.root / "LICENSE"
+        target = self.root / "installed-license"
+        source.write_text("new license")
+        target.write_text("old license")
+        target.chmod(0o444)
+        for owner, method in ((builder.os, "replace"), (builder.shutil, "copy2")):
+            with self.subTest(operation=method), \
+                 mock.patch.object(owner, method, side_effect=PermissionError("injected")):
+                with self.assertRaises(PermissionError):
+                    builder._copy_file_atomic(source, target)
+            self.assertEqual(target.read_text(), "old license")
+            self.assertEqual(target.stat().st_mode & 0o777, 0o444)
+            self.assertFalse(list(self.root.glob(".vellum-license-*")))
+        builder._copy_file_atomic(source, target)
+        self.assertEqual(target.read_text(), "new license")
+
     def test_cmake_rechecks_and_repairs_missing_header(self):
         source = self.root / "cmake-source"
-        build = self.root / "cmake-build"
         (source / "scripts").mkdir(parents=True)
         (source / "docs").mkdir()
         (source / "docs/dependencies.lock.json").write_bytes(
@@ -160,7 +180,9 @@ class DependencyRepairTests(unittest.TestCase):
             'project(dependency_fixture LANGUAGES NONE)\n'
             f'set(Python3_EXECUTABLE "{sys.executable}")\n'
             'set(VELLUM_DEPS_PREFIX "${PROJECT_BINARY_DIR}/install")\n'
-            'set(VELLUM_DEPS_WORK "${PROJECT_BINARY_DIR}/work")\n'
+            'if(NOT DEFINED VELLUM_DEPS_WORK)\n'
+            '  set(VELLUM_DEPS_WORK "${PROJECT_BINARY_DIR}/work")\n'
+            'endif()\n'
             'set(VELLUM_DEPENDENCY_JOBS 1)\n'
             'set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")\n'
             'add_library(Threads::Threads INTERFACE IMPORTED)\n'
@@ -176,18 +198,61 @@ class DependencyRepairTests(unittest.TestCase):
             '    path = prefix / name\n'
             '    path.parent.mkdir(parents=True, exist_ok=True)\n'
             '    if not path.exists(): path.write_text("fixture")\n')
-        subprocess.run(["cmake", "-S", str(source), "-B", str(build)], check=True,
+        generators = ["Unix Makefiles"] + (["Ninja"] if shutil.which("ninja") else [])
+        for index, generator in enumerate(generators):
+            with self.subTest(generator=generator):
+                build = self.root / f"cmake-build-{index}"
+                subprocess.run(["cmake", "-S", str(source), "-B", str(build), "-G", generator],
+                               check=True, capture_output=True, text=True)
+                def run_build():
+                    subprocess.run(["cmake", "--build", str(build), "--target", "vellum_dependencies"],
+                                   check=True, capture_output=True, text=True)
+                run_build()
+                run_build()
+                header = build / "install/include/mupdf/pdf.h"
+                header.unlink()
+                run_build()
+                self.assertEqual((build / "install/calls").read_text(), "3")
+                self.assertEqual(header.read_text(), "fixture")
+                managed = build / "work/v8-tree/v8/out/vellum/obj/example.o"
+                other = build / "work/v8-tree/v8/out/other/keep.o"
+                source_file = build / "work/v8-tree/v8/src/user.txt"
+                for path in (managed, other, source_file):
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text("keep except managed output")
+                subprocess.run(["cmake", "--build", str(build), "--target", "clean"], check=True,
+                               capture_output=True, text=True)
+                artifacts = ("lib/libmupdf.a", "lib/libmupdf-third.a", "lib/libv8_monolith.a",
+                             "include/mupdf/fitz.h", "include/mupdf/pdf.h", "include/v8/v8.h")
+                for name in artifacts:
+                    self.assertFalse((build / "install" / name).exists(), name)
+                self.assertFalse(managed.exists())
+                self.assertTrue(other.is_file())
+                self.assertTrue(source_file.is_file())
+                run_build()
+                self.assertEqual((build / "install/calls").read_text(), "4")
+                for name in artifacts:
+                    self.assertEqual((build / "install" / name).read_text(), "fixture")
+        external_build = self.root / "cmake-build-external"
+        subprocess.run(["cmake", "-S", str(source), "-B", str(external_build),
+                        f"-DVELLUM_V8_ROOT={self.prefix}"], check=True,
                        capture_output=True, text=True)
-        def run_build():
-            subprocess.run(["cmake", "--build", str(build), "--target", "vellum_dependencies"],
-                           check=True, capture_output=True, text=True)
-        run_build()
-        run_build()
-        header = build / "install/include/mupdf/pdf.h"
-        header.unlink()
-        run_build()
-        self.assertEqual((build / "install/calls").read_text(), "3")
-        self.assertEqual(header.read_text(), "fixture")
+        unrelated = external_build / "work/v8-tree/v8/out/vellum/keep.o"
+        unrelated.parent.mkdir(parents=True)
+        unrelated.write_text("external root must not clean managed work")
+        subprocess.run(["cmake", "--build", str(external_build), "--target", "clean"],
+                       check=True, capture_output=True, text=True)
+        self.assertTrue(unrelated.is_file())
+        unsafe = self.root / "do-not-delete"
+        unsafe.mkdir()
+        marker = unsafe / "keep"
+        marker.write_text("user data")
+        rejected = subprocess.run(
+            ["cmake", "-S", str(source), "-B", str(self.root / "cmake-build-unsafe"),
+             f"-DVELLUM_DEPS_WORK={unsafe};unexpected"], capture_output=True, text=True, check=False)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("cannot contain semicolons", rejected.stderr)
+        self.assertEqual(marker.read_text(), "user data")
 
 
 if __name__ == "__main__":

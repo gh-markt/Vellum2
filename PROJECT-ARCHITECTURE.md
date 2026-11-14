@@ -254,10 +254,11 @@ edges; never fabricate behavior or weaken verification to meet a percentage.
 
 Maintain `HANDOFF.md` as a concise current recovery checkpoint. Update it after
 each source-file change and before the next action. Record the active state,
-immediate next steps and genuinely unresolved blockers; remove completed results
-unless they are needed to resume. Permanent requirements and durable findings
-belong in the authoritative architecture or verification documents, not a diary
-of completed work in the handoff.
+immediate next steps and genuinely unresolved blockers. Omit completed actions and
+results unless they are essential to understanding or executing the next action.
+Permanent requirements and durable findings belong in the authoritative 
+architecture or verification documents, not a diary of completed work in the
+handoff.
 
 Keep instrumented test counters and coverage-report generation on a RAM-backed
 filesystem when available, preserving complete project and subprocess coverage.

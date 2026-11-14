@@ -61,6 +61,15 @@ headers and licenses have been installed. Missing headers, changed build options
 and interrupted installations trigger repair. MuPDF's old objects are cleaned
 before rebuilding so changed options cannot silently reuse them. Logs can be
 captured under work/.
+Cleaning a full CMake build removes its declared managed dependency outputs and the
+managed V8 `out/vellum` build directory, so the next full build configures and
+recompiles V8. Other V8 output directories and explicit V8 roots are not removed.
+Builds that share `VELLUM_DEPS_WORK` share that managed V8 output, so do not clean
+one of them while another is building it.
+For an existing V8 checkout, preparation
+temporarily suspends only the verified Vellum patch and ICU build shim while
+`gclient` synchronizes, then restores them even on failure. Other tracked or
+staged changes are rejected rather than discarded.
 
 ## Existing static installations and offline reuse
 

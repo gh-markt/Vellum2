@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Resumable local static dependency builder. Does not install OS packages."""
 import argparse
+import contextlib
 import fcntl
 import hashlib
 import json
@@ -9,6 +10,7 @@ import pathlib
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -188,6 +190,114 @@ def run(arguments, cwd=None, env=None):
     print("+", " ".join(map(str, arguments)), flush=True)
     return subprocess.run(list(map(str, arguments)), cwd=cwd, env=env, check=True)
 
+def _tracked_status(source):
+    return subprocess.check_output(
+        ["git", "status", "--porcelain", "--untracked-files=no", "--ignore-submodules"],
+        cwd=source, text=True)
+
+def _is_exact_v8_patch(source):
+    """Check the worktree against HEAD with an isolated index; never alter the real index."""
+    status = _tracked_status(source)
+    if not status:
+        return False
+    if any(line[0] != " " for line in status.splitlines()):
+        raise RuntimeError("V8 checkout has staged changes; preserve them before synchronizing")
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
+    if head != LOCK["v8"]["revision"]:
+        raise RuntimeError("modified V8 checkout is not at the pinned revision")
+    with tempfile.TemporaryDirectory(prefix="vellum-v8-index-") as directory:
+        env = os.environ.copy()
+        env["GIT_INDEX_FILE"] = str(pathlib.Path(directory) / "index")
+        subprocess.run(["git", "read-tree", "HEAD"], cwd=source, env=env, check=True)
+        subprocess.run(["git", "add", "--update"], cwd=source, env=env, check=True)
+        reversed_patch = subprocess.run(
+            ["git", "apply", "--cached", "--reverse", str(V8_ICU_PATCH)], cwd=source, env=env,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        remaining = subprocess.run(["git", "diff", "--cached", "--quiet", "HEAD"],
+                                   cwd=source, env=env)
+        if reversed_patch.returncode or remaining.returncode:
+            raise RuntimeError("V8 checkout contains changes beyond the Vellum compatibility patch")
+    return True
+
+def _replace_file_contents(path, contents):
+    """Replace a file atomically, retaining its permissions on failure or success."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".vellum-icu-",
+                                         delete=False) as stream:
+            temporary = pathlib.Path(stream.name)
+            stream.write(contents)
+        temporary.chmod(stat.S_IMODE(path.stat().st_mode))
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+def _restore_file_times(path, digest, times):
+    """Avoid needless rebuilds without hiding a file changed during synchronization."""
+    try:
+        if hashlib.sha256(path.read_bytes()).digest() == digest:
+            os.utime(path, ns=times)
+    except OSError as error:
+        print(f"Could not restore timestamps for {path}: {error}", file=sys.stderr)
+
+@contextlib.contextmanager
+def clean_v8_for_sync(source):
+    """Temporarily suspend only verified Vellum changes while gclient synchronizes."""
+    if not (source / ".git").exists():
+        yield
+        return
+    patch_applied = _is_exact_v8_patch(source)
+    patched_files = []
+    if patch_applied:
+        names = subprocess.check_output(
+            ["git", "diff", "--name-only", "-z", "HEAD", "--ignore-submodules=all"], cwd=source)
+        for name in names.split(b"\0"):
+            if name:
+                path = source / os.fsdecode(name)
+                info = path.stat()
+                patched_files.append((path, hashlib.sha256(path.read_bytes()).digest(),
+                                      (info.st_atime_ns, info.st_mtime_ns)))
+    icu = source / "third_party/icu"
+    target = icu / "BUILD.gn"
+    shim = source / "build/linux/unbundle/icu.gn"
+    backup = icu / "BUILD.gn.orig"
+    original = replacement = icu_times = None
+    if (icu / ".git").exists():
+        status = _tracked_status(icu)
+        if status:
+            if status != " M BUILD.gn\n" or not backup.is_file() or not shim.is_file():
+                raise RuntimeError("ICU checkout contains changes beyond the Vellum system shim")
+            original = subprocess.check_output(["git", "show", "HEAD:BUILD.gn"], cwd=icu)
+            replacement = shim.read_bytes()
+            if backup.read_bytes() != original or target.read_bytes() != replacement:
+                raise RuntimeError("ICU system shim or its original backup was modified")
+            info = target.stat()
+            icu_times = (info.st_atime_ns, info.st_mtime_ns)
+    reversed_patch = icu_pending = False
+    try:
+        if patch_applied:
+            run(["git", "apply", "--reverse", V8_ICU_PATCH], source)
+            reversed_patch = True
+        if original is not None:
+            icu_pending = True
+            _replace_file_contents(target, original)
+        yield
+    finally:
+        try:
+            if icu_pending:
+                current = target.read_bytes()
+                if current == original:
+                    _replace_file_contents(target, replacement)
+                elif current != replacement:
+                    raise RuntimeError("ICU build file changed during synchronization; not overwriting it")
+                _restore_file_times(target, hashlib.sha256(replacement).digest(), icu_times)
+        finally:
+            if reversed_patch:
+                run(["git", "apply", V8_ICU_PATCH], source)
+                for path, digest, times in patched_files:
+                    _restore_file_times(path, digest, times)
+
 def configure_v8_system_icu(source):
     """Apply the pinned checkout's unbundle shim and the reviewed V8 backport."""
     patch = str(V8_ICU_PATCH)
@@ -270,6 +380,18 @@ def checkout(name, destination):
     run(["git", "fetch", "--depth=1", "origin", specification["revision"]], destination)
     run(["git", "checkout", "--detach", "FETCH_HEAD"], destination)
 
+def _copy_file_atomic(source, target):
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".vellum-license-",
+                                         delete=False) as stream:
+            temporary = pathlib.Path(stream.name)
+        shutil.copy2(source, temporary)
+        os.replace(temporary, target)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
 def copy_licenses(source, destination):
     destination.mkdir(parents=True, exist_ok=True)
     # Preserve upstream notices, including bundled dependencies, with relative paths.
@@ -279,7 +401,7 @@ def copy_licenses(source, destination):
                 continue
             target = destination / path.relative_to(source)
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, target)
+            _copy_file_atomic(path, target)
 
 def build_mupdf(work, prefix, jobs):
     source = work / "mupdf"
@@ -312,11 +434,16 @@ def build_v8(work, prefix, jobs):
     tree = work / "v8-tree"
     tree.mkdir(exist_ok=True)
     config = tree / ".gclient"
-    config.write_text("solutions = " + repr([{"name": "v8", "url": LOCK["v8"]["url"],
-                                            "deps_file": "DEPS", "managed": False,
-                                            "custom_deps": {}}]) + "\n")
-    run(["gclient", "sync", "--no-history", "--revision", "v8@" + LOCK["v8"]["revision"]], tree, env)
+    expected_config = "solutions = " + repr([{"name": "v8", "url": LOCK["v8"]["url"],
+                                              "deps_file": "DEPS", "managed": False,
+                                              "custom_deps": {}}]) + "\n"
+    if config.exists() and config.read_text() != expected_config:
+        raise RuntimeError("V8 gclient configuration was modified; refusing to overwrite it")
+    if not config.exists():
+        config.write_text(expected_config)
     source = tree / "v8"
+    with clean_v8_for_sync(source):
+        run(["gclient", "sync", "--no-history", "--revision", "v8@" + LOCK["v8"]["revision"]], tree, env)
     configure_v8_system_icu(source)
     output = source / "out/vellum"
     arguments = v8_system_gn_args(icu["libdir"], cpu)

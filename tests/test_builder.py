@@ -252,6 +252,20 @@ class BuilderTests(unittest.TestCase):
                     builder.platform, "machine", return_value="unsupported"):
                 with self.assertRaisesRegex(SystemExit, "supports Linux"):
                     builder.build_v8(work, prefix, 2)
+    def test_modified_gclient_configuration_is_preserved(self):
+        with tempfile.TemporaryDirectory() as path:
+            root = pathlib.Path(path)
+            tree = root / "work/v8-tree"
+            tree.mkdir(parents=True)
+            config = tree / ".gclient"
+            config.write_text("user configuration\n")
+            with mock.patch.object(builder, "checkout"), mock.patch.object(builder, "run") as run, \
+                 mock.patch.object(builder, "system_icu_identity", return_value={"libdir": "lib64"}), \
+                 mock.patch.object(builder.platform, "machine", return_value="x86_64"):
+                with self.assertRaisesRegex(RuntimeError, "configuration was modified"):
+                    builder.build_v8(root / "work", root / "prefix", 2)
+            self.assertEqual(config.read_text(), "user configuration\n")
+            self.assertFalse(any(call.args[0][0] == "gclient" for call in run.call_args_list))
     def test_explicit_invalid_root_fails_without_building(self):
         with tempfile.TemporaryDirectory() as path:
             directory = pathlib.Path(path)
