@@ -19,6 +19,9 @@
   shared or host filesystem.
 - Local dependency installations are under `.deps/install`, and dependency source
   and build trees are under `work/dependencies`. Keep logs under ignored `work/`.
+- The `cmake-build-debug` cache uses `VELLUM_DEPENDENCY_JOBS=auto`. At the time
+  of configuration, this host exposed 24 CPUs and about 67 GiB available memory;
+  the automatic count is recalculated when each dependency needs a build.
 - The host reports ICU 79.1 through `pkg-config`; the Ubuntu test image reports
   ICU 78.2. The local default V8 archive is built against the host ICU; the previous
   bundled-ICU archive and receipt are preserved under `work/v8-bundled-backup-l85cv2c3`.

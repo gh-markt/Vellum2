@@ -13,7 +13,7 @@ option(VELLUM_COVERAGE "Instrument project code for gcov coverage" OFF)
 set(VELLUM_SANITIZER "" CACHE STRING "address, undefined or thread (one build per sanitizer)")
 set(VELLUM_DEPS_PREFIX "${PROJECT_SOURCE_DIR}/.deps/install" CACHE PATH "Local static dependency prefix")
 set(VELLUM_DEPS_WORK "${PROJECT_SOURCE_DIR}/work/dependencies" CACHE PATH "Dependency work area")
-set(VELLUM_DEPENDENCY_JOBS 2 CACHE STRING "Maximum dependency compile jobs (V8 is memory intensive)")
+set(VELLUM_DEPENDENCY_JOBS auto CACHE STRING "Dependency build jobs: auto or a positive integer")
 set(VELLUM_MUPDF_ROOT "" CACHE PATH "Use an existing compatible static MuPDF installation")
 set(VELLUM_V8_ROOT "" CACHE PATH "Use an existing compatible static V8 installation")
 add_custom_target(package

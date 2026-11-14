@@ -7,6 +7,7 @@ import json
 import os
 import pathlib
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -15,6 +16,113 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LOCK = json.loads((ROOT / "docs/dependencies.lock.json").read_text())
 V8_ICU_PATCH = ROOT / "patches/v8-icu79-unicode18.patch"
+
+GIB = 1024 ** 3
+# Conservative planning estimates, not measured per-process guarantees.
+JOB_MEMORY = {"mupdf": GIB, "v8": 2 * GIB}
+
+def _mount_path(text):
+    return pathlib.PurePosixPath(re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), text))
+
+def _cgroup_mounts(proc):
+    """Find this process's visible cgroup paths, including delegated mounts."""
+    try:
+        groups = [line.split(":", 2) for line in (proc / "self/cgroup").read_text().splitlines()]
+        mounts = (proc / "self/mountinfo").read_text().splitlines()
+    except OSError:
+        return []
+    result = []
+    for line in mounts:
+        fields = line.split()
+        try:
+            separator = fields.index("-")
+            filesystem = fields[separator + 1]
+            controllers = set(fields[separator + 3].split(","))
+            root, mount = _mount_path(fields[3]), pathlib.Path(str(_mount_path(fields[4])))
+            for _, names, group in groups:
+                names = set(names.split(","))
+                relevant = filesystem == "cgroup2" and names == {""}
+                relevant |= filesystem == "cgroup" and bool(names & controllers & {"memory", "cpu"})
+                if relevant:
+                    try:
+                        location = mount / _mount_path(group).relative_to(root)
+                    except ValueError:
+                        continue
+                    result.append((filesystem, names, mount, location))
+        except (IndexError, ValueError):
+            continue
+    return result
+
+def _read_integer(path):
+    try:
+        value = path.read_text().strip()
+        return int(value) if value != "max" else None
+    except (OSError, ValueError):
+        return None
+
+def _cgroup_resources(proc):
+    memory = None
+    cpus = None
+    for filesystem, controllers, mount, location in _cgroup_mounts(proc):
+        for directory in (location, *location.parents):
+            if directory != mount and mount not in directory.parents:
+                break
+            if filesystem == "cgroup2" or "memory" in controllers:
+                limit_name = "memory.max" if filesystem == "cgroup2" else "memory.limit_in_bytes"
+                usage_name = "memory.current" if filesystem == "cgroup2" else "memory.usage_in_bytes"
+                limit = _read_integer(directory / limit_name)
+                if limit is not None and 0 <= limit < 2 ** 60:
+                    used = _read_integer(directory / usage_name)
+                    available = max(0, limit - used) if used is not None and used >= 0 else 0
+                    memory = available if memory is None else min(memory, available)
+            if filesystem == "cgroup2":
+                try:
+                    quota, period = (directory / "cpu.max").read_text().split()
+                    quota = None if quota == "max" else int(quota)
+                    period = int(period)
+                except (OSError, ValueError):
+                    quota, period = None, None
+            elif "cpu" in controllers:
+                quota = _read_integer(directory / "cpu.cfs_quota_us")
+                period = _read_integer(directory / "cpu.cfs_period_us")
+            else:
+                quota, period = None, None
+            if quota is not None and period and quota > 0 and period > 0:
+                count = max(1, (quota + period - 1) // period)
+                cpus = count if cpus is None else min(cpus, count)
+    return memory, cpus
+
+def processor_limit():
+    """Use the smaller of the available affinity and nproc counts."""
+    try:
+        cpus = len(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        cpus = os.cpu_count() or 1
+    try:
+        nproc = int(subprocess.check_output(["nproc"], text=True,
+                                            stderr=subprocess.DEVNULL, timeout=5).strip())
+        if nproc > 0:
+            cpus = min(cpus, nproc)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass  # Affinity and cgroup quotas still provide a cap when nproc is unavailable.
+    return max(1, cpus)
+
+def automatic_jobs(kind, proc=pathlib.Path("/proc")):
+    """Budget jobs from available RAM, nproc, affinity and visible cgroup limits."""
+    cpus = processor_limit()
+    try:
+        memory_info = (proc / "meminfo").read_text().splitlines()
+        available = next(int(line.split()[1]) * 1024 for line in memory_info
+                         if line.startswith("MemAvailable:"))
+    except (OSError, ValueError, IndexError, StopIteration):
+        available = 0
+    group_memory, group_cpus = _cgroup_resources(proc)
+    if group_memory is not None:
+        available = min(available, group_memory)
+    if group_cpus is not None:
+        cpus = min(cpus, group_cpus)
+    reserve = max(2 * GIB, available // 5)
+    return max(1, min(cpus, max(0, available - reserve) // JOB_MEMORY[kind]))
 
 def system_icu_version():
     """Identify the matching ICU libraries that the local build will use."""
@@ -231,12 +339,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prefix", type=pathlib.Path, required=True)
     parser.add_argument("--work", type=pathlib.Path, required=True)
-    parser.add_argument("--jobs", type=int, default=2)
+    parser.add_argument("--jobs", default="auto", help="auto or an explicit positive job count")
     parser.add_argument("--mupdf-root", default="")
     parser.add_argument("--v8-root", default="")
     args = parser.parse_args()
-    if args.jobs < 1:
-        parser.error("--jobs must be positive")
+    if args.jobs != "auto":
+        try:
+            args.jobs = int(args.jobs)
+        except ValueError:
+            parser.error("--jobs must be auto or a positive integer")
+        if args.jobs < 1:
+            parser.error("--jobs must be auto or a positive integer")
     if platform.system() != "Linux":
         parser.error("bootstrap dependency preparation currently supports Linux")
     args.prefix = args.prefix.resolve()
@@ -255,7 +368,10 @@ def main():
                                  "See docs/BUILDING.md for the external installation contract.")
             else:
                 (prefix / f"share/vellum/{kind}.json").unlink(missing_ok=True)
-                build(args.work, prefix, args.jobs)
+                jobs = (automatic_jobs(kind) if args.jobs == "auto"
+                        else min(args.jobs, processor_limit()))
+                print(f"Building {kind} with {jobs} parallel job(s) ({args.jobs})", flush=True)
+                build(args.work, prefix, jobs)
     print("Static dependencies prepared successfully", flush=True)
 
 if __name__ == "__main__":

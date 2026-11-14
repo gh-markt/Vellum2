@@ -6,6 +6,9 @@ Do not claim whole catalog features from partial infrastructure.
 
 ## 0.34 — Reboot bootstrap
 
+- Isolate headless GUI tests from desktop session services and portal mounts.
+- Size V8 and MuPDF build parallelism from available memory and CPU/container
+  limits by default, retaining an explicit job-count override.
 - Recheck dependency receipts and installed headers on each build, repairing
   incomplete or incompatible managed installations without manual stamp removal.
 - Separate test registration and common allocation interception while retaining

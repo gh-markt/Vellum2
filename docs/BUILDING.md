@@ -7,7 +7,7 @@ pkg-config, system ICU >=73 development files (`icu-uc` and `icu-i18n`), and
 wxWidgets >=3.2.6 development files (wxGTK), including its printing
 framework. Vellum does not require CUPS headers or a direct CUPS library. V8 preparation also needs the upstream depot_tools prerequisites,
 network access to Chromium repositories/CIPD, Ninja, a suitable Clang/sysroot and
-substantial free disk/RAM. Budget tens of GiB for V8, start with two build jobs.
+substantial free disk/RAM. Budget tens of GiB for V8.
 No third-party sources or binaries are shipped. No OS package manager is invoked
 by Vellum's builder. Slackware-current is supported as a native target; use its
 wx-config and compiler. wxWidgets 3.2.6 is the compatibility baseline.
@@ -25,7 +25,17 @@ Normal configuration requires wxWidgets immediately. Each build rechecks the
 dependency receipts and required installed artifacts, then fetches/builds only
 incompatible or incomplete MuPDF/V8 installations into .deps/install; source
 checkouts and intermediate builds go into work/dependencies.
-Use VELLUM_DEPENDENCY_JOBS to bound dependency compilation independently of -j.
+Dependency builds default to `VELLUM_DEPENDENCY_JOBS=auto`, independently of the
+outer build's `-j`: each build uses available RAM after reserving the greater of
+2 GiB or 20%, estimates 2 GiB per V8 job and 1 GiB per MuPDF job, and caps jobs
+to `nproc`, CPU affinity and visible cgroup memory and CPU limits. If `nproc` is
+unavailable, affinity and cgroup limits still apply. At least
+one job runs even under severe memory pressure. These are planning estimates,
+not peak-memory guarantees; other activity and compiler/linker memory can vary.
+Set `-DVELLUM_DEPENDENCY_JOBS=<positive integer>` to override the memory-based
+count; the explicit count is still capped at `nproc` and CPU affinity.
+Existing CMake caches retain their previous setting; set it to `auto` explicitly
+to adopt automatic sizing.
 V8 is linked only into the installed libexec/vellum/vellum-script-worker executable.
 The V8 archive uses Chromium's system-ICU shim; the worker links the environment's
 ICU shared libraries and the compiler's atomic runtime. V8 is configured with `use_sysroot=true` and the current
@@ -107,7 +117,10 @@ Vellum does not instrument upstream libraries. Store reports under work/coverage
 The `VELLUM_CORE_ONLY` example is a core-only report, not a project-wide baseline.
 Tests use nproc parallelism; disk-intensive recovery tests use a CTest resource
 lock. GUI tests each start a private Xvfb display, so they can run concurrently;
-allocation batches reserve four CTest processor slots for their own workers.
+their runner forces GTK's X11 backend, uses local GIO and disables session-bus
+auto-launch to avoid desktop services and portal mounts in temporary homes.
+Allocation batches reserve four CTest processor slots
+for their own workers.
 The disk-full test uses an empty dedicated tmpfs mount no larger than 16 MiB. It
 uses `VELLUM_DISK_FULL_TEST_DIR` when provided, or creates a private 1 MiB tmpfs
 in a user and mount namespace. CI supplies the mount explicitly where namespace
@@ -115,6 +128,9 @@ creation may be restricted. Missing provisioning is a test failure, not a skip;
 never point the test at a shared filesystem.
 For a full report configure without that option, build with `VELLUM_COVERAGE=ON`,
 and run the complete applicable CTest suite. GUI tests start Xvfb themselves.
+The RAM-backed coverage command runs the instrumented tests first and then
+measures their counters. `testing.coverage_reporter` tests the reporting tool's
+handling of counters and errors; it is not the application coverage measurement.
 CMake's `vellum_target`
 instruments project C++ targets; CTest registers standalone C++ executables and
 Python builder/catalog checks. Full configuration generates reference.pdf via

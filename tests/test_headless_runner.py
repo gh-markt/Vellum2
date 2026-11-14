@@ -18,6 +18,26 @@ def run_test(*command, **kwargs):
 
 
 class HeadlessRunnerTests(unittest.TestCase):
+    def test_desktop_environment_cannot_redirect_the_private_display(self):
+        environment = os.environ.copy()
+        environment.update(DISPLAY=":9999", WAYLAND_DISPLAY="unused-wayland",
+                           XAUTHORITY="/nonexistent", GDK_BACKEND="wayland",
+                           GIO_USE_VFS="gvfs", DBUS_SESSION_BUS_ADDRESS="autolaunch:",
+                           GTK_USE_PORTAL="1")
+        probe = ("import ctypes,ctypes.util,os; "
+                 "assert os.environ['DISPLAY'] != ':9999'; "
+                 "assert os.environ['GDK_BACKEND'] == 'x11'; "
+                 "assert os.environ['GIO_USE_VFS'] == 'local'; "
+                 "assert os.environ['DBUS_SESSION_BUS_ADDRESS'] == 'disabled:'; "
+                 "assert 'GTK_USE_PORTAL' not in os.environ; "
+                 "assert 'WAYLAND_DISPLAY' not in os.environ; "
+                 "assert 'XAUTHORITY' not in os.environ; "
+                 "x=ctypes.CDLL(ctypes.util.find_library('X11')); "
+                 "x.XOpenDisplay.argtypes=[ctypes.c_char_p]; "
+                 "x.XOpenDisplay.restype=ctypes.c_void_p; assert x.XOpenDisplay(None)")
+        result = run_test(sys.executable, "-c", probe, env=environment)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_failure_and_missing_command(self):
         self.assertEqual(run_test(sys.executable, "-c", "raise SystemExit(23)").returncode, 23)
         self.assertEqual(run_test().returncode, 2)

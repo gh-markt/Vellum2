@@ -5,6 +5,7 @@ import importlib.util
 import io
 import os
 import pathlib
+import runpy
 import signal
 import subprocess
 import sys
@@ -19,6 +20,51 @@ spec.loader.exec_module(runner)
 
 
 class HeadlessFaultTests(unittest.TestCase):
+    def test_in_process_startup_rejections_and_signal(self):
+        with mock.patch.object(sys, "argv", [str(PROGRAM)]), \
+             contextlib.redirect_stderr(io.StringIO()) as errors:
+            self.assertEqual(runner.main(), 2)
+            self.assertIn("expected a test command", errors.getvalue())
+        with mock.patch.object(sys, "argv", [str(PROGRAM), "/test"]), \
+             mock.patch.object(runner.shutil, "which", return_value=None), \
+             contextlib.redirect_stderr(io.StringIO()) as errors:
+            self.assertEqual(runner.main(), 2)
+            self.assertIn("Xvfb is required", errors.getvalue())
+        with self.assertRaises(runner.Interrupted) as raised:
+            runner.interrupt(signal.SIGTERM, None)
+        self.assertEqual(raised.exception.signum, signal.SIGTERM)
+
+    def test_entry_point_registers_signal_handlers(self):
+        with mock.patch.object(sys, "argv", [str(PROGRAM)]), \
+             mock.patch.object(signal, "signal") as register, \
+             contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                runpy.run_path(str(PROGRAM), run_name="__main__")
+        self.assertEqual(raised.exception.code, 2)
+        self.assertEqual([call.args[0] for call in register.call_args_list],
+                         [signal.SIGTERM, signal.SIGINT])
+
+    def test_invalid_display_stream_in_process(self):
+        cases = (([b""], None, "exited before"),
+                 ([b"x" * 32, b"x"], None, "invalid"),
+                 ([b"invalid\n"], None, "invalid"),
+                 ([b"99\n"], 1, "invalid"))
+        for chunks, status, message in cases:
+            with self.subTest(chunks=chunks, status=status):
+                server = mock.Mock()
+                server.poll.return_value = status
+                server.returncode = 1
+                server.stderr = io.BytesIO(b"server diagnostic\n")
+                with mock.patch.object(sys, "argv", [str(PROGRAM), "/test"]), \
+                     mock.patch.object(runner.shutil, "which", return_value="/fake/Xvfb"), \
+                     mock.patch.object(runner.subprocess, "Popen", return_value=server), \
+                     mock.patch.object(runner.select, "select", return_value=([1], [], [])), \
+                     mock.patch.object(runner.os, "read", side_effect=chunks), \
+                     contextlib.redirect_stderr(io.StringIO()) as errors:
+                    self.assertEqual(runner.main(), 2)
+                self.assertIn(message, errors.getvalue())
+                self.assertIn("server diagnostic", errors.getvalue())
+
     def test_bad_display_responses(self):
         for payload, diagnostic in ((b"", "exited before"), (b"invalid\n", "invalid"),
                                     (b"x" * 33, "invalid")):

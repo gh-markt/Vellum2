@@ -56,6 +56,12 @@ def main():
             raise RuntimeError("Xvfb returned an invalid or unavailable display")
         env = os.environ.copy()
         env["DISPLAY"] = ":" + number.decode("ascii")
+        env["GDK_BACKEND"] = "x11"
+        env["GIO_USE_VFS"] = "local"
+        env["DBUS_SESSION_BUS_ADDRESS"] = "disabled:"
+        env.pop("GTK_USE_PORTAL", None)
+        env.pop("WAYLAND_DISPLAY", None)
+        env.pop("XAUTHORITY", None)
         child = subprocess.Popen(sys.argv[1:], env=env, start_new_session=True)
         return child.wait()
     except Interrupted as error:
